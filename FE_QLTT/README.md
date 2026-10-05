@@ -12,7 +12,7 @@ Chạy cùng cả hệ thống bằng `docker compose up -d` ở thư mục cha.
 |---|---|---|---|
 | Client Site | `client` | Sinh viên | Tra cứu sách, chi tiết sách, thẻ thư viện, mượn trả của tôi, thông báo |
 | Admin Dashboard | `admin` | Thủ thư + Admin | Tổng quan, quầy mượn trả, sách, tác giả, thể loại, báo cáo |
-| | | Chỉ Admin | Tài khoản & thẻ, tham số hệ thống, nhật ký hệ thống |
+| | | Chỉ Admin | Tài khoản & thẻ, tham số hệ thống, sao lưu & dữ liệu, nhật ký hệ thống |
 
 ## Cấu trúc
 

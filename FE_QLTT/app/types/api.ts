@@ -150,3 +150,10 @@ export interface LoginResponse {
 export interface MessageResponse {
   message: string
 }
+
+export interface ImportResult {
+  message: string
+  imported: number
+  skipped: number
+  errors: string[]
+}

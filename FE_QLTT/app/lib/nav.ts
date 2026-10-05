@@ -3,6 +3,7 @@ import {
   BookMarked,
   BookOpen,
   ClipboardList,
+  Database,
   FileClock,
   IdCard,
   LayoutDashboard,
@@ -38,6 +39,7 @@ export const adminNav: NavItem[] = [
   { label: 'Báo cáo thống kê', to: '/admin/reports', icon: FileClock },
   { label: 'Tài khoản & thẻ', to: '/admin/accounts', icon: UserCog, roles: ['Admin'] },
   { label: 'Tham số hệ thống', to: '/admin/settings', icon: Settings, roles: ['Admin'] },
+  { label: 'Sao lưu & dữ liệu', to: '/admin/data', icon: Database, roles: ['Admin'] },
   { label: 'Nhật ký hệ thống', to: '/admin/logs', icon: FileClock, roles: ['Admin'] },
 ]
 
