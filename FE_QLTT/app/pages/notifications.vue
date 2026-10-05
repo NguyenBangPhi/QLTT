@@ -8,6 +8,8 @@ useHead({ title: 'Thông báo · Thư viện Đại học' })
 const { data: items, isPending, error, refetch } = useNotifications()
 const markRead = useMarkNotificationRead()
 
+const { page, items: pagedItems, total, limit } = usePagedList(items, 20)
+
 const chuaDoc = computed(() => (items.value ?? []).filter((n) => n.DaDoc === 0))
 
 function markAll() {
@@ -46,7 +48,7 @@ function markAll() {
 
       <ul class="space-y-2">
         <li
-          v-for="n in items"
+          v-for="n in pagedItems"
           :key="n.MaThongBao"
           :class="[
             'flex items-start gap-3 rounded-lg border p-4 transition-colors',
@@ -81,6 +83,8 @@ function markAll() {
           </UiButton>
         </li>
       </ul>
+
+      <CommonPagination v-model:page="page" :total="total" :limit="limit" />
     </CommonQueryState>
   </div>
 </template>

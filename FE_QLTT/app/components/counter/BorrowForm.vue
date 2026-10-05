@@ -3,32 +3,20 @@ import { AlertTriangle, Check, Lock, Plus, Search, Trash2, UserCheck } from 'luc
 import { formatDate, isoDateFromToday } from '~/lib/format'
 import type { Book, Student } from '~/types/api'
 
-/**
- * Mọi kiểm tra ở đây chỉ nhằm phản hồi sớm cho thủ thư. Nguồn chân lý duy nhất vẫn là
- * sp_BorrowBook — nút gửi không bị khoá vì lý do nghiệp vụ, để thông báo gốc từ stored
- * procedure luôn có cơ hội hiển thị.
- */
-
 const soSachToiDa = useConfigNumber('SO_SACH_TOI_DA', 3)
 const soNgayMuonToiDa = useConfigNumber('SO_NGAY_MUON_TOI_DA', 14)
 
-// --- Chọn sinh viên ---
 const studentKeyword = ref('')
 const debouncedStudent = refDebounced(studentKeyword, 300)
 const { data: students, isPending: loadingStudents } = useStudents(debouncedStudent)
 const selected = ref<Student | null>(null)
 
-// --- Giỏ sách ---
 const bookKeyword = ref('')
 const debouncedBook = refDebounced(bookKeyword, 300)
 const bookFilter = computed(() => ({ keyword: debouncedBook.value.trim() || undefined }))
 const { data: books } = useBooks(bookFilter)
 const cart = ref<Book[]>([])
 
-/**
- * Chưa gõ gì thì gợi ý sẵn vài cuốn còn nhiều bản nhất, thay vì để trống khiến thủ thư
- * không biết bắt đầu từ đâu. Đã gõ thì hiện nguyên kết quả tìm kiếm.
- */
 const danhSachGoiY = computed(() => {
   const list = books.value ?? []
   if (debouncedBook.value.trim()) return list
@@ -45,25 +33,21 @@ function removeFromCart(maSach: number) {
   cart.value = cart.value.filter((b) => b.MaSach !== maSach)
 }
 
-// --- Ngày hẹn trả ---
 const ngayHenTra = ref(isoDateFromToday(soNgayMuonToiDa.value))
 const dateTouched = ref(false)
-// Cấu hình tải về sau, chỉ ghi đè khi thủ thư chưa tự chỉnh ngày
 watch(soNgayMuonToiDa, (days) => {
   if (!dateTouched.value) ngayHenTra.value = isoDateFromToday(days)
 })
 
-/** Bấm vào bất kỳ đâu trong ô là mở lịch, không phải nhắm đúng cái icon bé xíu */
 function moLich(event: MouseEvent) {
   const input = event.target as HTMLInputElement & { showPicker?: () => void }
   try {
     input.showPicker?.()
   } catch {
-    // Một vài trình duyệt chặn showPicker ngoài ngữ cảnh tương tác trực tiếp
+    return
   }
 }
 
-// --- Cảnh báo ---
 const theBiKhoa = computed(() => selected.value?.TrangThaiThe === 0)
 const tongSauKhiMuon = computed(() => (selected.value?.SoSachDangMuon ?? 0) + cart.value.length)
 const vuotHanMuc = computed(() => Boolean(selected.value) && tongSauKhiMuon.value > soSachToiDa.value)
@@ -98,7 +82,6 @@ function submit() {
 
 <template>
   <div class="grid gap-6 lg:grid-cols-2">
-    <!-- Cột trái: chọn sinh viên -->
     <UiCard class="flex flex-col p-5">
       <h3 class="mb-3 font-semibold">1. Chọn sinh viên</h3>
 
@@ -173,7 +156,6 @@ function submit() {
       </template>
     </UiCard>
 
-    <!-- Cột phải: giỏ sách -->
     <UiCard class="flex flex-col p-5">
       <h3 class="mb-3 font-semibold">2. Chọn sách ({{ cart.length }})</h3>
 
@@ -261,7 +243,6 @@ function submit() {
       </div>
     </UiCard>
 
-    <!-- Cảnh báo và nút gửi -->
     <div class="lg:col-span-2">
       <div v-if="theBiKhoa || vuotHanMuc || coSachHet" class="mb-4 space-y-2">
         <div

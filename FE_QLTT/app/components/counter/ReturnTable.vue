@@ -3,10 +3,6 @@ import { RotateCcw, Search } from 'lucide-vue-next'
 import { estimateFine, formatCurrency, formatDate } from '~/lib/format'
 import type { BorrowingRow } from '~/types/api'
 
-/**
- * vw_SachDangMuon là nguồn duy nhất vừa có MaCTPM vừa lọc sẵn TrangThai = 1,
- * nên đây là chỗ đúng để thao tác trả sách.
- */
 const { data: rows, isPending, error, refetch } = useBorrowingBooks()
 
 const tienPhatMotNgay = useConfigNumber('TIEN_PHAT_MOT_NGAY', 5000)
@@ -27,6 +23,9 @@ const filtered = computed(() => {
     )
     .sort((a, b) => b.SoNgayQuaHan - a.SoNgayQuaHan)
 })
+
+const { page, items: pagedRows, total, limit, reset } = usePagedList(filtered, 20)
+watch([keyword, chiQuaHan], reset)
 
 const confirming = ref<BorrowingRow | null>(null)
 const dialogOpen = computed({
@@ -94,7 +93,7 @@ function confirmReturn() {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in filtered" :key="row.MaCTPM">
+          <tr v-for="row in pagedRows" :key="row.MaCTPM">
             <td>
               <p class="font-medium">{{ row.TenSinhVien }}</p>
               <p class="font-mono text-xs text-muted-foreground">{{ row.MaSV }}</p>
@@ -123,6 +122,8 @@ function confirmReturn() {
           </tr>
         </tbody>
       </UiTable>
+
+      <CommonPagination v-model:page="page" :total="total" :limit="limit" />
     </CommonQueryState>
 
     <UiDialog

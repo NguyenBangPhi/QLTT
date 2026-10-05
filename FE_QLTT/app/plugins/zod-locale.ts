@@ -1,10 +1,5 @@
 import { z } from 'zod'
 
-/**
- * Thông báo lỗi mặc định của zod là tiếng Anh ("Expected string, received number").
- * Đặt error map tiếng Việt một lần ở đây để mọi schema đều có câu chữ dễ hiểu, kể cả
- * những nhánh lỗi mà lúc viết schema không lường trước nên không gắn message riêng.
- */
 const viErrorMap: z.ZodErrorMap = (issue, ctx) => {
   switch (issue.code) {
     case z.ZodIssueCode.invalid_type:

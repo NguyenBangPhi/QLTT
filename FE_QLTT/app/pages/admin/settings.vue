@@ -10,7 +10,6 @@ const { lockOverdue, sendReminders } = useSystemTasks()
 
 type FieldKind = 'integer' | 'time' | 'email'
 
-/** Mỗi tham số có kiểu riêng nên cần luật kiểm tra riêng trước khi gửi lên */
 const FIELD_KIND: Record<string, FieldKind> = {
   SO_SACH_TOI_DA: 'integer',
   TIEN_PHAT_MOT_NGAY: 'integer',
@@ -27,10 +26,6 @@ function kindOf(key: string): FieldKind {
   return FIELD_KIND[key] ?? 'integer'
 }
 
-/**
- * Ô <input type="number"> trả về kiểu số vì Vue tự ép kiểu, còn ô text trả về chuỗi.
- * Chuẩn hoá về chuỗi trước khi kiểm tra, nếu không sẽ gọi .trim() trên số và văng lỗi.
- */
 function asText(value: string | number | undefined | null): string {
   return value === undefined || value === null ? '' : String(value)
 }
@@ -52,7 +47,6 @@ function validate(key: string, value: string | number | undefined | null): strin
   }
 }
 
-/** Giá trị đang chỉnh, tách khỏi dữ liệu gốc để biết dòng nào đã thay đổi */
 const draft = reactive<Record<string, string | number>>({})
 
 watchEffect(() => {
@@ -103,7 +97,6 @@ function reset(key: string, original: string) {
             <p class="mt-0.5 font-mono text-xs text-muted-foreground">{{ c.TenCauHinh }}</p>
           </div>
 
-          <!-- mt-auto ghim hàng thao tác xuống đáy để các thẻ trong cùng một dòng thẳng nhau -->
           <div class="mt-auto flex items-start gap-2">
             <div class="min-w-0 flex-1">
               <UiInput

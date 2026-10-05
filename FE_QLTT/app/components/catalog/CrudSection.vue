@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
 
-/**
- * Tác giả và thể loại có cấu trúc hoàn toàn giống nhau (một khoá chính, một cột tên,
- * CRUD thuần) nên dùng chung một màn hình thay vì chép đôi.
- */
 const props = defineProps<{ resource: 'authors' | 'genres' }>()
 
 const authors = useAuthors()
@@ -35,7 +31,9 @@ const rows = computed<Row[]>(() => {
   return (genres.data.value ?? []).map((g) => ({ id: g.MaTheLoai, name: g.TenTheLoai }))
 })
 
-// --- Thêm / sửa ---
+const { page, items: pagedRows, total, limit, reset } = usePagedList(rows, 20)
+watch(() => props.resource, reset)
+
 const formOpen = ref(false)
 const editing = ref<Row | null>(null)
 const name = ref('')
@@ -76,7 +74,6 @@ function save() {
   }
 }
 
-// --- Xoá ---
 const deleting = ref<Row | null>(null)
 const deleteOpen = computed({
   get: () => deleting.value !== null,
@@ -121,7 +118,7 @@ function confirmDelete() {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in rows" :key="row.id">
+          <tr v-for="row in pagedRows" :key="row.id">
             <td class="font-mono text-xs text-muted-foreground">{{ row.id }}</td>
             <td class="font-medium">{{ row.name }}</td>
             <td>
@@ -147,6 +144,8 @@ function confirmDelete() {
           </tr>
         </tbody>
       </UiTable>
+
+      <CommonPagination v-model:page="page" :total="total" :limit="limit" />
     </CommonQueryState>
 
     <UiDialog

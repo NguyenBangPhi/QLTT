@@ -180,6 +180,22 @@ Quyền **đọc** cấu hình mở cho cả Thủ thư vì màn quầy mượn 
 | PUT | `/api/notifications/:id/read` | `UPDATE ThongBao SET DaDoc = 1 WHERE MaThongBao = ?` | Sinh viên (chỉ của mình) |
 | POST | `/api/system/lock-overdue` | `CALL sp_LockOverdueAccounts()` | Admin (+ cron nội bộ) |
 | POST | `/api/system/send-reminders` | `CALL sp_SendReminder()` | Admin (+ cron nội bộ) |
+| POST | `/api/system/backup` | Chạy `mysqldump --routines --triggers --events`, trả file `backup.sql` (`application/sql`, attachment). Không nhận body | Admin |
+| POST | `/api/system/restore` | `multipart/form-data`, field `file` (.sql). Bơm file vào stdin của `mysql` CLI. **Ghi đè toàn bộ dữ liệu hiện có** | Admin |
+| POST | `/api/system/export` | Trả file `export.xlsx` gồm 4 sheet `Sach`, `SinhVien`, `NguoiDung`, `TheLoai` | Admin |
+| POST | `/api/system/import` | `multipart/form-data`, field `file` (.xlsx). Đọc sheet `Sach`, gọi `sp_AddBook` từng dòng. Trả `{message, imported, skipped, errors[]}` | Admin |
+
+**Yêu cầu môi trường.** `backup` và `restore` gọi `mysqldump` / `mysql` qua `child_process` chứ không qua `mysql2`, nên hai chương trình này phải có trong `PATH`. Trên image Alpine cần cả `mariadb-client` lẫn `mariadb-connector-c`: gói thứ hai mang plugin `caching_sha2_password` mà MySQL 8.4 dùng để xác thực.
+
+**Kết nối từ CLI.** Mật khẩu truyền qua biến môi trường `MYSQL_PWD`, không qua tham số `-p` và không chạy qua shell. Riêng client MariaDB cần thêm `--ssl-verify-server-cert=0` vì MySQL 8.4 dùng chứng chỉ tự ký; client của MySQL không có cờ này nên Backend dò `mysqldump --version` một lần để biết đang chạy với client nào.
+
+**Phạm vi của export.** Bốn sheet `Sach`, `SinhVien`, `NguoiDung`, `TheLoai`. Cột `MatKhau` của `NguoiDung` nằm ngoài danh sách xuất.
+
+**Phạm vi của import.** Chỉ đọc sheet `Sach`, mỗi dòng gọi `sp_AddBook` để nghiệp vụ vẫn do tầng DB quyết định. Cột bắt buộc: `ISBN`, `TenSach`, `MaTacGia`, `MaTheLoai`, `SoLuongTong`. Sheet `SinhVien` không được nhập vì tạo sinh viên còn kéo theo tài khoản `NguoiDung` kèm mật khẩu, thông tin đó không có trong file Excel. Dòng lỗi không làm dừng cả lượt nhập: mỗi dòng hỏng được ghi lại kèm lý do tiếng Việt và trả về trong `errors[]` (tối đa 20 dòng đầu).
+
+**Validate đầu vào.** Thiếu file, sai phần mở rộng hoặc file rỗng → `400`. Giới hạn kích thước upload 50 MB.
+
+**Swagger.** Hai endpoint upload khai báo `@ApiConsumes('multipart/form-data')` kèm `@ApiBody` mô tả field `file` dạng `binary`, để `/api/docs` hiện được ô chọn file.
 
 **Cronjob** (dùng `@nestjs/schedule`, `@Cron()`):
 - Chạy `sp_LockOverdueAccounts` — đề xuất mỗi ngày 1 lần (vd 00:30).
@@ -292,4 +308,5 @@ Tổng hợp các bẫy đã gặp thật, ghi lại để người sau không m
 | `PUT /api/users/:id/status` | Không chặn Admin tự khóa mình thì mất quyền quản trị vĩnh viễn — xem mục 4.1 |
 | `POST /api/borrow` | `sp_BorrowBook` không kiểm tra mảng sách rỗng và không kiểm tra ngày hẹn trả — xem mục 4.3 |
 | `affectedRows` | MySQL trả `0` cả khi bản ghi tồn tại nhưng giá trị không đổi, đừng dùng để kết luận "không tìm thấy" |
-| `package-lock.json` | Đang lệch với `package.json`, `npm ci` thất bại — chạy `npm install` rồi commit lại lock file |
+| `mysqldump` trong image | Chỉ cài `mariadb-client` là chưa đủ, thiếu `mariadb-connector-c` thì hỏng xác thực với MySQL 8.4 — xem mục 4.5 |
+| Export ra Excel | Quên loại cột `MatKhau` là phát tán hash mật khẩu của mọi người dùng — xem mục 4.5 |

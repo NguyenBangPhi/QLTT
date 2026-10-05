@@ -24,6 +24,7 @@ Database được khởi tạo tự động từ 3 file trong `docs/` — không
 ### Yêu cầu
 - Node.js >= 18
 - MySQL >= 8.0
+- `mysqldump` và `mysql` có trong `PATH` — hai API `/api/system/backup` và `/api/system/restore` gọi thẳng chúng. Chạy bằng Docker thì image đã cài sẵn.
 
 ### Bước 1: Khởi tạo Database
 Import 3 file SQL theo đúng thứ tự sau vào MySQL:
@@ -33,10 +34,8 @@ Import 3 file SQL theo đúng thứ tự sau vào MySQL:
 
 ### Bước 2: Cài đặt dependencies
 ```bash
-npm install
+npm ci
 ```
-
-> Dùng `npm install`, **không dùng `npm ci`**. File `package-lock.json` hiện không đồng bộ với `package.json` nên `npm ci` sẽ báo `Missing: typescript@5.9.3 from lock file`. Sau khi chạy `npm install` một lần, nên commit lại `package-lock.json` để sửa hẳn.
 
 ### Bước 3: Cấu hình biến môi trường
 Tạo file `.env` ở thư mục gốc (hoặc sửa file `.env` đã có) với các biến:

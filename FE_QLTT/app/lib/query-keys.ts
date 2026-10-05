@@ -1,11 +1,3 @@
-/**
- * Toàn bộ query key gom về một chỗ.
- *
- * Lý do: sau mỗi mutation phải làm mới đúng tập dữ liệu liên quan. Ví dụ lập phiếu mượn
- * xong thì tồn kho sách đổi, thống kê đang mượn đổi, và số sách đang mượn của sinh viên
- * đó cũng đổi. Có factory tập trung thì invalidate chính xác từng nhánh, thay vì gọi
- * invalidateQueries() trắng làm toàn bộ màn hình chớp nháy.
- */
 
 export interface BookFilter {
   keyword?: string

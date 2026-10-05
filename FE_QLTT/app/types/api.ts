@@ -1,11 +1,3 @@
-/**
- * Tên field giữ nguyên PascalCase tiếng Việt đúng như Backend trả về, không đổi sang
- * camelCase. Lý do: thêm một tầng ánh xạ là thêm một chỗ có thể sai, và khi bảo vệ đồ án
- * cần đối chiếu trực tiếp với tên cột trong database.
- *
- * Các cột BOOLEAN của MySQL về tới đây là số 0 hoặc 1, không phải true/false.
- * Các cột DATE về dạng chuỗi 'YYYY-MM-DD' (Backend bật dateStrings).
- */
 
 export type TenVaiTro = 'Admin' | 'Thủ thư' | 'Sinh viên'
 
@@ -76,7 +68,6 @@ export interface User {
   TenVaiTro: string
 }
 
-/** Một dòng của ChiTietPhieuMuon đã JOIN đủ thông tin — từ GET /api/borrow */
 export interface BorrowDetail {
   MaCTPM: number
   MaPhieuMuon: number
@@ -96,7 +87,6 @@ export interface BorrowDetail {
   SoNgayQuaHan: number
 }
 
-/** Từ sp_GetBorrowHistory — lưu ý stored procedure này KHÔNG trả về MaCTPM */
 export interface BorrowHistoryItem {
   MaPhieuMuon: number
   NgayMuon: string
@@ -107,7 +97,6 @@ export interface BorrowHistoryItem {
   TrangThai: number
 }
 
-/** Từ view vw_SachDangMuon và vw_SachQuaHan */
 export interface BorrowingRow {
   MaCTPM: number
   MaPhieuMuon: number
@@ -130,7 +119,6 @@ export interface Config {
 export interface SystemLog {
   MaLog: number
   TenBang: string
-  /** 0: UPDATE, 1: DELETE */
   HanhDong: number
   MaBanGhi: number
   NguoiThucHien: string | null
@@ -161,4 +149,11 @@ export interface LoginResponse {
 
 export interface MessageResponse {
   message: string
+}
+
+export interface ImportResult {
+  message: string
+  imported: number
+  skipped: number
+  errors: string[]
 }

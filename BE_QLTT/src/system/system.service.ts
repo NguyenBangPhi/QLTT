@@ -1,12 +1,26 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DatabaseService } from '../database/database.service';
-import * as fs from 'fs';
-import * as path from 'path';
 import * as ExcelJS from 'exceljs';
-import { exec, spawn } from 'child_process';
+import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
-const execAsync = promisify(exec);
+
+const execFileAsync = promisify(execFile);
+
+/** Lỗi của từng dòng import phải đọc được, không để nguyên câu tiếng Anh của MySQL */
+function importRowMessage(err: any): string {
+  if (err?.sqlState === '45000') return err.sqlMessage;
+  if (err?.code === 'ER_DUP_ENTRY') return 'ISBN đã tồn tại trong hệ thống.';
+  if (err?.code === 'ER_NO_REFERENCED_ROW_2' || err?.code === 'ER_NO_REFERENCED_ROW') {
+    return 'Mã tác giả hoặc mã thể loại không tồn tại.';
+  }
+  return err?.sqlMessage ?? err?.message ?? 'Lỗi không xác định.';
+}
 
 @Injectable()
 export class SystemService {
@@ -71,94 +85,211 @@ export class SystemService {
     }
   }
 
+  private dbConfig() {
+    return {
+      host: process.env.DB_HOST || 'localhost',
+      user: process.env.DB_USER || 'root',
+      password: process.env.DB_PASSWORD || '',
+      database: process.env.DB_NAME || 'QuanLyThuVien',
+    };
+  }
+
+  private cliSslArgs: string[] | null = null;
+
+  /**
+   * Client MariaDB (gói trong image Alpine) mặc định xác minh chứng chỉ máy chủ, trong khi
+   * MySQL 8.4 dùng chứng chỉ tự ký nên kết nối bị từ chối. Client của chính MySQL lại không
+   * có cờ này và sẽ báo lỗi tham số, nên phải dò xem đang dùng client nào.
+   */
+  private async clientSslArgs(): Promise<string[]> {
+    if (this.cliSslArgs) return this.cliSslArgs;
+    try {
+      const { stdout } = await execFileAsync('mysqldump', ['--version']);
+      this.cliSslArgs = /mariadb/i.test(stdout) ? ['--ssl-verify-server-cert=0'] : [];
+    } catch {
+      this.cliSslArgs = [];
+    }
+    return this.cliSslArgs;
+  }
+
   async backupDatabase(): Promise<string> {
-    this.logger.log('Executed backupDatabase via mysqldump');
-    const host = process.env.DB_HOST || 'localhost';
-    const user = process.env.DB_USER || 'root';
-    const pass = process.env.DB_PASSWORD || '';
-    const dbName = process.env.DB_NAME || 'QuanLyThuVien';
+    const { host, user, password, database } = this.dbConfig();
+    // Mật khẩu đi qua MYSQL_PWD thay vì -p: không lộ trong danh sách tiến trình và không
+    // phải lo thoát ký tự đặc biệt. execFile không qua shell nên cũng không có injection.
+    const args = [
+      '-h', host,
+      '-u', user,
+      ...(await this.clientSslArgs()),
+      database,
+      '--routines',
+      '--triggers',
+      '--events',
+    ];
 
     try {
-      // Gọi mysqldump qua CLI. Set maxBuffer 50MB tránh tràn bộ đệm
-      const cmd = `mysqldump -h ${host} -u ${user} -p${pass} ${dbName} --routines --triggers --events`;
-      const { stdout } = await execAsync(cmd, { maxBuffer: 50 * 1024 * 1024 });
-      this.logger.log('Backup generated successfully');
+      const { stdout } = await execFileAsync('mysqldump', args, {
+        env: { ...process.env, MYSQL_PWD: password },
+        maxBuffer: 50 * 1024 * 1024,
+      });
+      this.logger.log(`Backup created (${stdout.length} bytes)`);
       return stdout;
-    } catch (err) {
-      this.logger.error('Lỗi khi chạy mysqldump: ', err);
-      throw new Error('Lỗi khi sao lưu dữ liệu. Vui lòng kiểm tra lại môi trường cài đặt MySQL.');
+    } catch (err: any) {
+      this.logger.error(`mysqldump thất bại: ${err?.stderr || err?.message}`);
+      throw new InternalServerErrorException(
+        err?.code === 'ENOENT'
+          ? 'Máy chủ không có sẵn mysqldump nên không sao lưu được.'
+          : 'Sao lưu dữ liệu thất bại. Xem log máy chủ để biết chi tiết.',
+      );
     }
   }
 
-  async restoreDatabase(file: any) {
-    this.logger.log('Executed restoreDatabase via mysql CLI');
-    const host = process.env.DB_HOST || 'localhost';
-    const user = process.env.DB_USER || 'root';
-    const pass = process.env.DB_PASSWORD || '';
-    const dbName = process.env.DB_NAME || 'QuanLyThuVien';
+  async restoreDatabase(file: Express.Multer.File) {
+    const { host, user, password, database } = this.dbConfig();
+    const args = ['-h', host, '-u', user, ...(await this.clientSslArgs()), database];
 
-    return new Promise((resolve, reject) => {
-      // Spawn tiến trình mysql CLI
-      const mysqlProc = spawn('mysql', ['-h', host, '-u', user, `-p${pass}`, dbName], {
-        shell: true
+    return new Promise<{ message: string }>((resolve, reject) => {
+      const proc = spawn('mysql', args, { env: { ...process.env, MYSQL_PWD: password } });
+
+      let stderr = '';
+      proc.stderr.on('data', (chunk) => (stderr += chunk.toString()));
+
+      // Thiếu binary thì spawn không ném lỗi đồng bộ, chỉ phát sự kiện 'error'
+      proc.on('error', (err) => {
+        this.logger.error(`Không chạy được mysql CLI: ${err.message}`);
+        reject(
+          new InternalServerErrorException('Máy chủ không có sẵn mysql nên không phục hồi được.'),
+        );
       });
 
-      let errorOutput = '';
-      mysqlProc.stderr.on('data', (data) => {
-        errorOutput += data.toString();
-      });
-
-      mysqlProc.on('close', (code) => {
+      proc.on('close', (code) => {
         if (code === 0) {
-          this.logger.log('Đã restore database thành công!');
-          resolve({ message: 'Đã phân tích và restore dữ liệu thành công' });
+          this.logger.log('Restore thành công');
+          resolve({ message: 'Phục hồi dữ liệu thành công' });
         } else {
-          this.logger.error(`Lỗi khi restore (Code ${code}): ${errorOutput}`);
-          reject(new Error('Phục hồi dữ liệu thất bại. Cú pháp file .sql không hợp lệ hoặc lỗi DB.'));
+          this.logger.error(`Restore lỗi (exit ${code}): ${stderr}`);
+          reject(
+            new BadRequestException(
+              'Phục hồi thất bại: file .sql không hợp lệ hoặc gây lỗi khi thực thi.',
+            ),
+          );
         }
       });
 
-      // Bơm thẳng dữ liệu file upload vào STDIN của mysql
-      mysqlProc.stdin.write(file.buffer);
-      mysqlProc.stdin.end();
+      // Tiến trình chết sớm làm stdin văng EPIPE, đã báo lỗi ở 'close' rồi
+      proc.stdin.on('error', () => undefined);
+      proc.stdin.end(file.buffer);
     });
   }
 
+  /** Cột tuyệt đối không được xuất ra file: hash mật khẩu của toàn bộ người dùng */
+  private static readonly EXPORT_BLOCKLIST: Record<string, string[]> = {
+    NguoiDung: ['MatKhau'],
+  };
+
   async exportData(): Promise<ExcelJS.Buffer> {
-    this.logger.log('Executed exportData');
     const wb = new ExcelJS.Workbook();
-    
-    const tables = ['Sach', 'SinhVien', 'NguoiDung', 'TheLoai'];
-    for (const table of tables) {
+
+    for (const table of ['Sach', 'SinhVien', 'NguoiDung', 'TheLoai']) {
       const sheet = wb.addWorksheet(table);
-      const data = await this.db.query(`SELECT * FROM ${table}`);
-      if (data && data.length > 0) {
-        // Lấy danh sách cột từ row đầu tiên
-        sheet.columns = Object.keys(data[0]).map(key => ({ header: key, key: key }));
-        sheet.addRows(data);
-      }
+      const rows = await this.db.query<any[]>(`SELECT * FROM ${table}`);
+      if (!rows.length) continue;
+
+      const blocked = SystemService.EXPORT_BLOCKLIST[table] ?? [];
+      sheet.columns = Object.keys(rows[0])
+        .filter((key) => !blocked.includes(key))
+        .map((key) => ({ header: key, key }));
+      sheet.addRows(rows);
     }
 
-    return await wb.xlsx.writeBuffer();
+    return wb.xlsx.writeBuffer();
   }
 
-  async importData(file: any) {
-    this.logger.log('Executed importData');
-    
+  /**
+   * Chỉ nhập sheet "Sach", qua sp_AddBook để giữ nguyên nghiệp vụ ở tầng DB (chặn ISBN
+   * trùng, đồng bộ tồn kho). Các sheet khác bị bỏ qua: thêm sinh viên còn kéo theo việc
+   * tạo tài khoản NguoiDung kèm mật khẩu, không suy ra được từ file Excel.
+   */
+  async importData(file: Express.Multer.File) {
     const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(file.buffer);
-    
-    let logMsg = 'Đã phân tích và import dữ liệu từ file upload. ';
-    const tablesToImport = ['Sach', 'SinhVien'];
-    for (const tableName of tablesToImport) {
-      const sheet = wb.getWorksheet(tableName);
-      if (sheet) {
-        // Thực tế sẽ đọc sheet.eachRow để map data và gọi INSERT INTO ...
-        const rowsCount = Math.max(0, sheet.rowCount - 1); // Trừ đi header
-        logMsg += `[Bảng ${tableName}: ${rowsCount} dòng] `;
+    // exceljs nhận ArrayBuffer, Buffer của Node là Uint8Array nên không khớp kiểu
+    const data = file.buffer.buffer.slice(
+      file.buffer.byteOffset,
+      file.buffer.byteOffset + file.buffer.byteLength,
+    ) as ArrayBuffer;
+
+    try {
+      await wb.xlsx.load(data);
+    } catch {
+      throw new BadRequestException('Không đọc được file Excel. Kiểm tra lại định dạng .xlsx.');
+    }
+
+    const sheet = wb.getWorksheet('Sach');
+    if (!sheet) {
+      throw new BadRequestException(
+        'File không có sheet tên "Sach". Hãy dùng file tải về từ chức năng Xuất dữ liệu.',
+      );
+    }
+
+    const columnOf = new Map<string, number>();
+    sheet.getRow(1).eachCell((cell, col) => columnOf.set(String(cell.value ?? '').trim(), col));
+
+    const required = ['ISBN', 'TenSach', 'MaTacGia', 'MaTheLoai', 'SoLuongTong'];
+    const missing = required.filter((name) => !columnOf.has(name));
+    if (missing.length) {
+      throw new BadRequestException(`Sheet "Sach" thiếu cột: ${missing.join(', ')}`);
+    }
+
+    const errors: string[] = [];
+    let imported = 0;
+
+    for (let r = 2; r <= sheet.rowCount; r++) {
+      const row = sheet.getRow(r);
+      const valueOf = (name: string) => {
+        const col = columnOf.get(name);
+        const value = col ? row.getCell(col).value : null;
+        return value === null || value === undefined || value === '' ? null : value;
+      };
+
+      const isbn = valueOf('ISBN');
+      if (!isbn) continue;
+
+      const maTacGia = Number(valueOf('MaTacGia'));
+      const maTheLoai = Number(valueOf('MaTheLoai'));
+      const soLuong = Number(valueOf('SoLuongTong') ?? 0);
+      if (
+        !Number.isInteger(maTacGia) ||
+        !Number.isInteger(maTheLoai) ||
+        !Number.isInteger(soLuong) ||
+        soLuong < 0
+      ) {
+        errors.push(
+          `Dòng ${r} (ISBN ${isbn}): MaTacGia, MaTheLoai, SoLuongTong phải là số nguyên không âm.`,
+        );
+        continue;
+      }
+
+      try {
+        await this.db.callProcedure('sp_AddBook', [
+          String(isbn),
+          String(valueOf('TenSach') ?? ''),
+          maTacGia,
+          maTheLoai,
+          valueOf('NhaXuatBan') === null ? null : String(valueOf('NhaXuatBan')),
+          valueOf('NamXuatBan') === null ? null : Number(valueOf('NamXuatBan')),
+          soLuong,
+        ]);
+        imported++;
+      } catch (err: any) {
+        errors.push(`Dòng ${r} (ISBN ${isbn}): ${importRowMessage(err)}`);
       }
     }
 
-    return { message: logMsg };
+    this.logger.log(`Import: thêm ${imported} sách, ${errors.length} dòng lỗi`);
+    return {
+      message: `Đã nhập ${imported} sách${errors.length ? `, bỏ qua ${errors.length} dòng lỗi` : ''}.`,
+      imported,
+      skipped: errors.length,
+      errors: errors.slice(0, 20),
+    };
   }
 }

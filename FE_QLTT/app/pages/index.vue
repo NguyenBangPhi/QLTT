@@ -8,7 +8,6 @@ const keyword = ref('')
 const maTacGia = ref<number | ''>('')
 const maTheLoai = ref<number | ''>('')
 
-// sp_SearchBooks tìm đồng thời trên tên sách, ISBN và tên tác giả
 const debouncedKeyword = refDebounced(keyword, 300)
 
 const filter = computed(() => ({
@@ -20,6 +19,9 @@ const filter = computed(() => ({
 const { data: books, isPending, error, refetch } = useBooks(filter)
 const { data: authors } = useAuthors()
 const { data: genres } = useGenres()
+
+const { page, items: pagedBooks, total, limit, reset } = usePagedList(books, 12)
+watch(filter, reset)
 
 const hasFilter = computed(
   () => Boolean(filter.value.keyword || filter.value.maTacGia || filter.value.maTheLoai),
@@ -100,8 +102,10 @@ function clearFilters() {
       </template>
 
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <BookCard v-for="b in books" :key="b.MaSach" :book="b" />
+        <BookCard v-for="b in pagedBooks" :key="b.MaSach" :book="b" />
       </div>
+
+      <CommonPagination v-model:page="page" :total="total" :limit="limit" />
     </CommonQueryState>
   </div>
 </template>

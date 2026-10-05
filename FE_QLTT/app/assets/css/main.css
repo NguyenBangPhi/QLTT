@@ -2,25 +2,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/*
-  Toàn bộ màu của ứng dụng nằm trong file này. Đổi tông màu chỉ cần sửa ở đây,
-  không phải đụng vào component nào.
-
-  Nhóm token:
-    - Nền tảng (background, card, border...)  : xám trung tính
-    - primary                                  : indigo, dùng cho hành động chính
-    - success / warning / danger               : gắn với trạng thái nghiệp vụ
-        success  = đang mượn bình thường
-        warning  = sắp đến hạn trả
-        danger   = quá hạn / thẻ bị khoá
-*/
-
 :root {
-  /*
-    Bắt buộc phải khai báo, nếu không trình duyệt vẽ mọi control gốc (nút lịch của
-    input type=date, thanh cuộn, mũi tên của select) theo nền sáng — ở giao diện tối
-    chúng thành đen trên đen, gần như không nhìn thấy.
-  */
   color-scheme: light;
 
   --radius: 0.625rem;
@@ -186,16 +168,10 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 
-  /* Viền focus nhất quán cho toàn bộ ứng dụng, phục vụ điều hướng bằng bàn phím */
   :focus-visible {
     @apply outline-ring outline-2 outline-offset-2;
   }
 
-  /*
-    Tailwind v4 đặt cursor: default cho <button> trong preflight, khác với v3.
-    Khai báo lại ở đây để mọi phần tử bấm được đều có con trỏ bàn tay, kể cả các
-    trigger của Reka UI (tab, dropdown, switch) vốn render ra thẻ button.
-  */
   button:not(:disabled),
   [role='button']:not([aria-disabled='true']),
   [role='tab']:not([aria-disabled='true']),

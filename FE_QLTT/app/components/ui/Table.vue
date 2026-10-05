@@ -6,7 +6,6 @@ const props = defineProps<{ class?: string }>()
 
 <template>
   <div class="overflow-x-auto rounded-lg border">
-    <!-- Kiểu dáng ô nằm trong .data-table ở main.css để các trang không phải lặp class -->
     <table :class="cn('data-table w-full caption-bottom text-sm', props.class)">
       <slot />
     </table>

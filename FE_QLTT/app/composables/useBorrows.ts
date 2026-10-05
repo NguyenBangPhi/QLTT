@@ -9,10 +9,6 @@ import type {
 import { qk, type BorrowFilter } from '~/lib/query-keys'
 import { compactQuery } from '~/lib/utils'
 
-/**
- * Danh sách chi tiết mượn/trả, có MaCTPM nên dùng được cho thao tác trả sách và
- * điều chỉnh tiền phạt. sp_GetBorrowHistory không trả MaCTPM nên không thay thế được.
- */
 export function useBorrowList(filter: MaybeRefOrGetter<BorrowFilter> = {}) {
   const { $api } = useNuxtApp()
   return useQuery({
@@ -22,7 +18,6 @@ export function useBorrowList(filter: MaybeRefOrGetter<BorrowFilter> = {}) {
   })
 }
 
-/** Lịch sử của sinh viên. Bỏ trống maSV thì Backend tự lấy từ token. */
 export function useBorrowHistory(maSV: MaybeRefOrGetter<string | undefined> = undefined) {
   const { $api } = useNuxtApp()
   return useQuery({
@@ -34,7 +29,6 @@ export function useBorrowHistory(maSV: MaybeRefOrGetter<string | undefined> = un
   })
 }
 
-/** Sau khi mượn/trả, tồn kho và thống kê đều đổi nên phải làm mới cùng lúc */
 function useBorrowInvalidation() {
   const qc = useQueryClient()
   return () => {
@@ -86,7 +80,6 @@ export function useUpdateFine() {
     }) =>
       $api<MessageResponse>(`/borrow/fines/${maCTPM}`, {
         method: 'PUT',
-        // Chỉ bỏ field undefined. Chuỗi rỗng phải giữ lại vì đó là thao tác xoá ghi chú.
         body: {
           ...(tienPhat === undefined ? {} : { tienPhat }),
           ...(ghiChu === undefined ? {} : { ghiChu }),

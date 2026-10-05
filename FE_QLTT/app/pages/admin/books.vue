@@ -18,24 +18,19 @@ const { data: books, isPending, error, refetch } = useBooks(filter)
 const { data: authors } = useAuthors()
 const { data: genres } = useGenres()
 
+const { page, items: pagedBooks, total, limit, reset } = usePagedList(books, 20)
+watch(filter, reset)
+
 const createBook = useCreateBook()
 const updateBook = useUpdateBook()
 const deleteBook = useDeleteBook()
 
-// --- Form thêm/sửa ---
 const editing = ref<Book | null>(null)
 const formOpen = ref(false)
 
-// Năm xuất bản cho chọn từ danh sách thay vì gõ tay — tránh sai định dạng và nhanh hơn
 const namHienTai = new Date().getFullYear()
 const danhSachNam = Array.from({ length: namHienTai - 1899 }, (_, i) => namHienTai - i)
 
-/*
-  Lưu ý về kiểu dữ liệu của từng ô:
-    - Ô <select> luôn trả về chuỗi.
-    - Ô <input type="number"> trả về KIỂU SỐ, vì Vue tự ép kiểu cho input số.
-  Khai báo sai kiểu ở đây sẽ sinh lỗi "Giá trị phải là chuỗi ký tự" và không lưu được.
-*/
 const schema = toTypedSchema(
   z.object({
     ISBN: z.string().trim().min(1, 'Vui lòng nhập mã ISBN'),
@@ -95,7 +90,6 @@ function openEdit(book: Book) {
   formOpen.value = true
 }
 
-/** Trigger trg_AutoSyncStock cộng trừ tồn kho theo mức thay đổi của tổng số bản */
 const soDangMuon = computed(() =>
   editing.value ? editing.value.SoLuongTong - editing.value.SoLuongTon : 0,
 )
@@ -121,7 +115,6 @@ const onSubmit = handleSubmit((formValues) => {
   }
 })
 
-// --- Xoá ---
 const deleting = ref<Book | null>(null)
 const deleteOpen = computed({
   get: () => deleting.value !== null,
@@ -180,7 +173,7 @@ function confirmDelete() {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="b in books" :key="b.MaSach">
+          <tr v-for="b in pagedBooks" :key="b.MaSach">
             <td class="font-mono text-xs">{{ b.ISBN }}</td>
             <td class="max-w-64 truncate font-medium">{{ b.TenSach }}</td>
             <td class="text-muted-foreground">{{ b.TenTacGia }}</td>
@@ -212,9 +205,10 @@ function confirmDelete() {
           </tr>
         </tbody>
       </UiTable>
+
+      <CommonPagination v-model:page="page" :total="total" :limit="limit" />
     </CommonQueryState>
 
-    <!-- Form thêm/sửa -->
     <UiDialog
       v-model:open="formOpen"
       :title="editing ? 'Sửa thông tin sách' : 'Thêm sách mới'"
@@ -312,7 +306,6 @@ function confirmDelete() {
       </template>
     </UiDialog>
 
-    <!-- Xác nhận xoá -->
     <UiDialog
       v-model:open="deleteOpen"
       title="Xoá sách"

@@ -9,14 +9,12 @@ const LIMIT = 20
 const page = ref(1)
 const { data, isPending, error, refetch } = useLogs(page, LIMIT)
 
-const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0) / LIMIT)))
 
 const expanded = ref<number | null>(null)
 function toggle(id: number) {
   expanded.value = expanded.value === id ? null : id
 }
 
-/** Gộp khoá của giá trị cũ và mới để hiện đủ cả trường bị xoá lẫn trường mới thêm */
 function diffKeys(cu: Record<string, unknown> | null, moi: Record<string, unknown> | null) {
   return [...new Set([...Object.keys(cu ?? {}), ...Object.keys(moi ?? {})])]
 }
@@ -119,17 +117,7 @@ function show(value: unknown) {
         </tbody>
       </UiTable>
 
-      <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <p class="text-sm text-muted-foreground">
-          Trang {{ page }}/{{ totalPages }} · tổng {{ data?.total }} bản ghi
-        </p>
-        <div class="flex gap-2">
-          <UiButton variant="outline" size="sm" :disabled="page <= 1" @click="page--">Trước</UiButton>
-          <UiButton variant="outline" size="sm" :disabled="page >= totalPages" @click="page++">
-            Sau
-          </UiButton>
-        </div>
-      </div>
+      <CommonPagination v-model:page="page" :total="data?.total" :limit="LIMIT" />
     </CommonQueryState>
   </div>
 </template>

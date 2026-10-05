@@ -8,7 +8,6 @@ export function useNotifications() {
   return useQuery({
     queryKey: qk.notifications.all(),
     queryFn: () => $api<Notification[]>('/notifications'),
-    // Backend khoá endpoint này cho vai trò Sinh viên, gọi bằng vai trò khác sẽ nhận 403
     enabled: computed(() => auth.isStudent),
   })
 }
@@ -26,7 +25,6 @@ export function useMarkNotificationRead() {
     mutationFn: (id: number) =>
       $api<MessageResponse>(`/notifications/${id}/read`, { method: 'PUT' }),
 
-    // Cập nhật lạc quan: đánh dấu đã đọc phản hồi tức thì, lỗi thì trả lại như cũ
     async onMutate(id) {
       await qc.cancelQueries({ queryKey: qk.notifications.all() })
       const previous = qc.getQueryData<Notification[]>(qk.notifications.all())

@@ -27,7 +27,6 @@ function toCsv(rows: BorrowingRow[]) {
 function exportCsv() {
   const rows = current.value.data.value ?? []
   if (!rows.length) return
-  // BOM để Excel nhận đúng UTF-8, nếu không tiếng Việt sẽ hiển thị sai
   const blob = new Blob(['﻿' + toCsv(rows)], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -40,6 +39,9 @@ function exportCsv() {
 const sorted = computed(() =>
   [...(current.value.data.value ?? [])].sort((a, b) => b.SoNgayQuaHan - a.SoNgayQuaHan),
 )
+
+const { page, items: pagedRows, total, limit, reset } = usePagedList(sorted, 20)
+watch(tab, reset)
 </script>
 
 <template>
@@ -72,7 +74,6 @@ const sorted = computed(() =>
         </TabsTrigger>
       </TabsList>
 
-      <!-- Hai tab dùng chung một bảng, chỉ khác nguồn dữ liệu, nên không tách TabsContent -->
       <div>
         <CommonQueryState
           :pending="current.isPending.value"
@@ -93,7 +94,7 @@ const sorted = computed(() =>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in sorted" :key="row.MaCTPM">
+              <tr v-for="row in pagedRows" :key="row.MaCTPM">
                 <td>
                   <p class="font-medium">{{ row.TenSinhVien }}</p>
                   <p class="font-mono text-xs text-muted-foreground">{{ row.MaSV }}</p>
@@ -111,6 +112,8 @@ const sorted = computed(() =>
               </tr>
             </tbody>
           </UiTable>
+
+          <CommonPagination v-model:page="page" :total="total" :limit="limit" />
         </CommonQueryState>
       </div>
     </TabsRoot>

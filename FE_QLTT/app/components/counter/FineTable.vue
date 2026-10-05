@@ -3,20 +3,11 @@ import { Pencil, Search } from 'lucide-vue-next'
 import { formatCurrency, formatDate } from '~/lib/format'
 import type { BorrowDetail } from '~/types/api'
 
-/**
- * Chỉ GET /api/borrow mới trả MaCTPM của những cuốn đã trả — sp_GetBorrowHistory không có
- * trường này nên không dùng để điều chỉnh tiền phạt được.
- *
- * Trigger trg_PreventDuplicateReturn chặn mọi thay đổi khác ngoài TienPhat trên dòng đã
- * trả, nên form này chỉ mở đúng hai ô: tiền phạt và ghi chú.
- */
 const LIMIT = 20
 const page = ref(1)
 const keyword = ref('')
 const debouncedKeyword = refDebounced(keyword, 300)
 
-// Tìm kiếm chạy ở phía máy chủ chứ không lọc trên mảng đã tải về, nếu không ô tìm kiếm
-// chỉ soi được đúng trang đang mở mà người dùng lại tưởng là tìm toàn bộ.
 const filter = computed(() => ({
   trangThai: 0,
   keyword: debouncedKeyword.value.trim() || undefined,
@@ -24,17 +15,14 @@ const filter = computed(() => ({
   limit: LIMIT,
 }))
 
-// Đổi từ khoá mà vẫn ở trang 5 thì nhiều khả năng rơi vào trang rỗng
 watch(debouncedKeyword, () => {
   page.value = 1
 })
 
 const { data, isPending, error, refetch } = useBorrowList(filter)
 const rows = computed(() => data.value?.data ?? [])
-const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0) / LIMIT)))
 
 const editing = ref<BorrowDetail | null>(null)
-// Ô nhập số trả về kiểu số, nhưng khi người dùng xoá trắng thì lại là chuỗi rỗng
 const tienPhat = ref<number | string>(0)
 const ghiChu = ref('')
 
@@ -55,7 +43,6 @@ const updateFine = useUpdateFine()
 
 function save() {
   if (!editing.value) return
-  // Ô để trống hiểu là 0; chặn số âm vì cột TienPhat không nhận giá trị âm
   const value = Math.max(0, Math.round(Number(tienPhat.value) || 0))
   updateFine.mutate(
     { maCTPM: editing.value.MaCTPM, tienPhat: value, ghiChu: ghiChu.value },
@@ -128,19 +115,7 @@ function save() {
         </tbody>
       </UiTable>
 
-      <div v-if="totalPages > 1" class="mt-4 flex items-center justify-between gap-3">
-        <p class="text-sm text-muted-foreground">
-          Trang {{ page }}/{{ totalPages }} · {{ data?.total }} bản ghi
-        </p>
-        <div class="flex gap-2">
-          <UiButton variant="outline" size="sm" :disabled="page <= 1" @click="page--">
-            Trước
-          </UiButton>
-          <UiButton variant="outline" size="sm" :disabled="page >= totalPages" @click="page++">
-            Sau
-          </UiButton>
-        </div>
-      </div>
+      <CommonPagination v-model:page="page" :total="data?.total" :limit="LIMIT" />
     </CommonQueryState>
 
     <UiDialog
