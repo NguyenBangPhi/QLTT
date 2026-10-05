@@ -1,0 +1,106 @@
+name: qltt
+
+services:
+  mysql:
+    # Image tự build chỉ để thêm charset.cnf — xem docker/mysql/Dockerfile giải thích lý do
+    build: ./docker/mysql
+    image: qltt-mysql:8.4
+    container_name: qltt-mysql
+    restart: unless-stopped
+    command:
+      - --default-time-zone=+07:00
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "${DB_PORT_HOST:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Entrypoint chạy các file này theo thứ tự alphabet, nên phải đổi tên khi mount.
+      # Tên gốc (DA-CRUD, DA-DATA, DA-Schema) sẽ ra thứ tự sai.
+      - ./BE_QLTT/docs/DA-Schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./BE_QLTT/docs/DA-CRUD.sql:/docker-entrypoint-initdb.d/02-crud.sql:ro
+      - ./BE_QLTT/docs/DA-DATA.sql:/docker-entrypoint-initdb.d/03-data.sql:ro
+    healthcheck:
+      test:
+        ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  api:
+    build:
+      context: ./BE_QLTT
+      target: dev
+    container_name: qltt-api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: QuanLyThuVien
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1d}
+      LOCK_OVERDUE_CRON: ${LOCK_OVERDUE_CRON}
+      SEND_REMINDER_CRON: ${SEND_REMINDER_CRON}
+      PORT: 3000
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3001}
+      TZ: Asia/Ho_Chi_Minh
+      # nest --watch không nhận thay đổi qua bind-mount của Docker Desktop trên Windows
+      CHOKIDAR_USEPOLLING: "true"
+    ports:
+      - "${API_PORT:-3000}:3000"
+    volumes:
+      - ./BE_QLTT:/app
+      - api_node_modules:/app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  web:
+    build:
+      context: ./FE_QLTT
+      target: dev
+    container_name: qltt-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      # Nuxt proxy /api sang đây, nên trình duyệt chỉ gọi một origin duy nhất
+      NUXT_API_TARGET: http://api:3000/api
+      TZ: Asia/Ho_Chi_Minh
+    ports:
+      - "${WEB_PORT:-3001}:3000"
+    volumes:
+      - ./FE_QLTT:/app
+      - web_node_modules:/app/node_modules
+      - web_nuxt:/app/.nuxt
+
+  adminer:
+    image: adminer:5
+    container_name: qltt-adminer
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+
+volumes:
+  mysql_data:
+  api_node_modules:
+  web_node_modules:
+  web_nuxt:
