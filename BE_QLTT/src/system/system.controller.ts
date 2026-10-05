@@ -1,4 +1,6 @@
-import { Controller, Get, Put, Post, Param, Query, ParseIntPipe, UseGuards, Request, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Put, Post, Param, Query, ParseIntPipe, UseGuards, Request, ForbiddenException, UseInterceptors, UploadedFile, StreamableFile, Res } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import { SystemService } from './system.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
@@ -51,5 +53,47 @@ export class SystemController {
   @Post('system/send-reminders')
   sendReminders() {
     return this.systemService.sendReminders();
+  }
+
+  @Roles('Admin')
+  @ApiOperation({ summary: 'Backup dữ liệu' })
+  @Post('system/backup')
+  async backup(@Res({ passthrough: true }) res: Response) {
+    const backupContent = await this.systemService.backupDatabase();
+    res.set({
+      'Content-Type': 'application/sql',
+      'Content-Disposition': 'attachment; filename="backup.sql"',
+    });
+    return new StreamableFile(Buffer.from(backupContent));
+  }
+
+  @Roles('Admin')
+  @ApiOperation({ summary: 'Restore dữ liệu' })
+  @Post('system/restore')
+  @UseInterceptors(FileInterceptor('file'))
+  restore(@UploadedFile() file: any) {
+    if (!file) throw new ForbiddenException('Vui lòng upload file .sql');
+    return this.systemService.restoreDatabase(file);
+  }
+
+  @Roles('Admin')
+  @ApiOperation({ summary: 'Export dữ liệu' })
+  @Post('system/export')
+  async export(@Res({ passthrough: true }) res: Response) {
+    const buffer = await this.systemService.exportData();
+    res.set({
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'Content-Disposition': 'attachment; filename="export.xlsx"',
+    });
+    return new StreamableFile(Buffer.from(buffer));
+  }
+
+  @Roles('Admin')
+  @ApiOperation({ summary: 'Import dữ liệu' })
+  @Post('system/import')
+  @UseInterceptors(FileInterceptor('file'))
+  import(@UploadedFile() file: any) {
+    if (!file) throw new ForbiddenException('Vui lòng upload file .xlsx');
+    return this.systemService.importData(file);
   }
 }
