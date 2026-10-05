@@ -12,6 +12,21 @@ useHead({ title: 'Đăng nhập · Thư viện Đại học' })
 
 const auth = useAuthStore()
 const route = useRoute()
+const router = useRouter()
+
+function resolveTarget(redirect: unknown): string {
+  if (typeof redirect !== 'string' || !redirect.startsWith('/') || redirect.startsWith('//')) {
+    return auth.homePath
+  }
+
+  const resolved = router.resolve(redirect)
+  if (!resolved.matched.length || resolved.path === '/login') return auth.homePath
+
+  const allowed = resolved.meta.roles
+  if (allowed?.length && (!auth.role || !allowed.includes(auth.role))) return auth.homePath
+
+  return redirect
+}
 
 const schema = toTypedSchema(
   z.object({
@@ -27,8 +42,7 @@ const [password, passwordAttrs] = defineField('password')
 const onSubmit = handleSubmit(async (values) => {
   try {
     await auth.login(values.username, values.password)
-    const redirect = route.query.redirect
-    await navigateTo(typeof redirect === 'string' ? redirect : auth.homePath)
+    await navigateTo(resolveTarget(route.query.redirect))
   } catch (error) {
     toast.error(normalizeApiError(error).message)
   }
