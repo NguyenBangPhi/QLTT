@@ -1,0 +1,226 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Toàn bộ màu của ứng dụng nằm trong file này. Đổi tông màu chỉ cần sửa ở đây,
+  không phải đụng vào component nào.
+
+  Nhóm token:
+    - Nền tảng (background, card, border...)  : xám trung tính
+    - primary                                  : indigo, dùng cho hành động chính
+    - success / warning / danger               : gắn với trạng thái nghiệp vụ
+        success  = đang mượn bình thường
+        warning  = sắp đến hạn trả
+        danger   = quá hạn / thẻ bị khoá
+*/
+
+:root {
+  /*
+    Bắt buộc phải khai báo, nếu không trình duyệt vẽ mọi control gốc (nút lịch của
+    input type=date, thanh cuộn, mũi tên của select) theo nền sáng — ở giao diện tối
+    chúng thành đen trên đen, gần như không nhìn thấy.
+  */
+  color-scheme: light;
+
+  --radius: 0.625rem;
+
+  --background: oklch(0.99 0.002 265);
+  --foreground: oklch(0.21 0.03 265);
+
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.03 265);
+
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.21 0.03 265);
+
+  --primary: oklch(0.51 0.21 277);
+  --primary-foreground: oklch(0.99 0.005 270);
+
+  --secondary: oklch(0.96 0.005 265);
+  --secondary-foreground: oklch(0.28 0.03 265);
+
+  --muted: oklch(0.96 0.005 265);
+  --muted-foreground: oklch(0.55 0.02 265);
+
+  --accent: oklch(0.95 0.02 277);
+  --accent-foreground: oklch(0.36 0.12 277);
+
+  --destructive: oklch(0.58 0.22 27);
+  --destructive-foreground: oklch(0.99 0.005 270);
+
+  --success: oklch(0.6 0.13 160);
+  --success-foreground: oklch(0.99 0.005 270);
+  --success-soft: oklch(0.95 0.04 160);
+  --success-soft-foreground: oklch(0.4 0.1 160);
+
+  --warning: oklch(0.75 0.15 75);
+  --warning-foreground: oklch(0.25 0.05 75);
+  --warning-soft: oklch(0.96 0.05 85);
+  --warning-soft-foreground: oklch(0.45 0.11 65);
+
+  --danger: oklch(0.58 0.22 27);
+  --danger-foreground: oklch(0.99 0.005 270);
+  --danger-soft: oklch(0.95 0.04 25);
+  --danger-soft-foreground: oklch(0.45 0.16 27);
+
+  --border: oklch(0.92 0.005 265);
+  --input: oklch(0.92 0.005 265);
+  --ring: oklch(0.51 0.21 277);
+
+  --sidebar: oklch(0.985 0.003 265);
+  --sidebar-foreground: oklch(0.21 0.03 265);
+  --sidebar-border: oklch(0.92 0.005 265);
+  --sidebar-accent: oklch(0.95 0.02 277);
+  --sidebar-accent-foreground: oklch(0.36 0.12 277);
+}
+
+.dark {
+  color-scheme: dark;
+
+  --background: oklch(0.18 0.02 265);
+  --foreground: oklch(0.96 0.005 265);
+
+  --card: oklch(0.22 0.02 265);
+  --card-foreground: oklch(0.96 0.005 265);
+
+  --popover: oklch(0.22 0.02 265);
+  --popover-foreground: oklch(0.96 0.005 265);
+
+  --primary: oklch(0.68 0.16 277);
+  --primary-foreground: oklch(0.18 0.03 277);
+
+  --secondary: oklch(0.28 0.02 265);
+  --secondary-foreground: oklch(0.96 0.005 265);
+
+  --muted: oklch(0.28 0.02 265);
+  --muted-foreground: oklch(0.7 0.02 265);
+
+  --accent: oklch(0.32 0.05 277);
+  --accent-foreground: oklch(0.92 0.04 277);
+
+  --destructive: oklch(0.64 0.2 25);
+  --destructive-foreground: oklch(0.99 0.005 270);
+
+  --success: oklch(0.68 0.13 160);
+  --success-foreground: oklch(0.18 0.03 160);
+  --success-soft: oklch(0.3 0.06 160);
+  --success-soft-foreground: oklch(0.85 0.1 160);
+
+  --warning: oklch(0.8 0.14 80);
+  --warning-foreground: oklch(0.22 0.04 80);
+  --warning-soft: oklch(0.32 0.06 80);
+  --warning-soft-foreground: oklch(0.88 0.1 85);
+
+  --danger: oklch(0.64 0.2 25);
+  --danger-foreground: oklch(0.99 0.005 270);
+  --danger-soft: oklch(0.32 0.08 25);
+  --danger-soft-foreground: oklch(0.88 0.09 25);
+
+  --border: oklch(0.32 0.02 265);
+  --input: oklch(0.32 0.02 265);
+  --ring: oklch(0.68 0.16 277);
+
+  --sidebar: oklch(0.2 0.02 265);
+  --sidebar-foreground: oklch(0.96 0.005 265);
+  --sidebar-border: oklch(0.3 0.02 265);
+  --sidebar-accent: oklch(0.32 0.05 277);
+  --sidebar-accent-foreground: oklch(0.92 0.04 277);
+}
+
+@theme inline {
+  --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-foreground: var(--success-soft-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-warning-soft-foreground: var(--warning-soft-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-soft-foreground: var(--danger-soft-foreground);
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  /* Viền focus nhất quán cho toàn bộ ứng dụng, phục vụ điều hướng bằng bàn phím */
+  :focus-visible {
+    @apply outline-ring outline-2 outline-offset-2;
+  }
+
+  /*
+    Tailwind v4 đặt cursor: default cho <button> trong preflight, khác với v3.
+    Khai báo lại ở đây để mọi phần tử bấm được đều có con trỏ bàn tay, kể cả các
+    trigger của Reka UI (tab, dropdown, switch) vốn render ra thẻ button.
+  */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='tab']:not([aria-disabled='true']),
+  [role='switch']:not([aria-disabled='true']),
+  summary,
+  label[for] {
+    @apply cursor-pointer;
+  }
+
+  button:disabled,
+  [aria-disabled='true'] {
+    @apply cursor-not-allowed;
+  }
+}
+
+@layer components {
+  .data-table thead th {
+    @apply bg-muted/50 px-4 py-3 text-left text-xs font-medium tracking-wide text-muted-foreground uppercase whitespace-nowrap;
+  }
+
+  .data-table tbody tr {
+    @apply border-t;
+  }
+
+  .data-table tbody td {
+    @apply px-4 py-3 align-middle;
+  }
+}
