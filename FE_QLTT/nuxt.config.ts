@@ -3,9 +3,6 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineNuxtConfig({
   compatibilityDate: '2026-09-25',
 
-  // Mọi trang đều nằm sau đăng nhập và token giữ ở localStorage, nên SSR không mang lại
-  // lợi ích gì mà còn buộc phải chuyển token sang cookie. Chạy SPA nhưng vẫn giữ trọn
-  // file-based routing, layouts, middleware và auto-import của Nuxt.
   ssr: false,
 
   devtools: { enabled: true },
@@ -32,18 +29,10 @@ export default defineNuxtConfig({
   vite: {
     plugins: [tailwindcss()],
     server: {
-      // Bind-mount của Docker Desktop trên Windows không phát fs event
       watch: { usePolling: true, interval: 500 },
     },
   },
 
-  // Vite watch ở trên chỉ lo module đã biên dịch. Nuxt còn một watcher riêng để quét
-  // thư mục pages/composables/components và dựng bảng auto-import — không bật polling
-  // cho nó thì file mới tạo sẽ không được đăng ký, dẫn tới lỗi "useXxx is not defined".
-  //
-  // Mặc định Nuxt dùng watcher native (@parcel/watcher) vốn không có tuỳ chọn polling và
-  // không nhận sự kiện qua bind-mount của Docker Desktop trên Windows. Phải đổi sang
-  // chokidar thì usePolling mới có tác dụng.
   experimental: {
     watcher: 'chokidar',
   },
@@ -52,7 +41,6 @@ export default defineNuxtConfig({
     chokidar: { usePolling: true, interval: 500 },
   },
 
-  // Trình duyệt chỉ nói chuyện với một origin duy nhất nên không dính CORS
   nitro: {
     devProxy: {
       '/api': {

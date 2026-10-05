@@ -11,7 +11,6 @@ useHead({ title: 'Tài khoản & thẻ · Quản trị thư viện' })
 
 const tab = useTabQuery(['users', 'cards'])
 
-// --- Tài khoản đăng nhập ---
 const users = useUsers()
 const updateUserStatus = useUpdateUserStatus()
 
@@ -24,7 +23,6 @@ const filteredUsers = computed(() => {
   )
 })
 
-// --- Thẻ thư viện ---
 const studentKeyword = ref('')
 const debouncedStudent = refDebounced(studentKeyword, 300)
 const students = useStudents(debouncedStudent)

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Library, Menu, PanelLeftClose, PanelLeftOpen, X } from 'lucide-vue-next'
-// Phải import tường minh: Nuxt cũng tự động nạp một useStorage khác của Nitro
 import { useStorage } from '@vueuse/core'
 import { cn } from '~/lib/utils'
 import { visibleNav, type NavItem } from '~/lib/nav'
@@ -8,7 +7,6 @@ import { useAuthStore } from '~/stores/auth'
 
 const props = defineProps<{
   nav: NavItem[]
-  /** Tên khu vực hiện tại, hiện dưới logo */
   area: string
 }>()
 
@@ -16,12 +14,10 @@ const auth = useAuthStore()
 const route = useRoute()
 const mobileOpen = ref(false)
 
-// Nhớ lựa chọn của người dùng giữa các lần vào trang
 const collapsed = useStorage('qltt.sidebar-collapsed', false)
 
 const items = computed(() => visibleNav(props.nav, auth.role))
 
-// '/' và '/admin' phải so khớp tuyệt đối, nếu không chúng sẽ luôn sáng
 function isActive(to: string) {
   if (to === '/' || to === '/admin') return route.path === to
   return route.path === to || route.path.startsWith(`${to}/`)
@@ -32,7 +28,6 @@ watch(() => route.fullPath, () => (mobileOpen.value = false))
 
 <template>
   <div class="min-h-screen bg-background">
-    <!-- Sidebar cố định trên màn hình lớn -->
     <aside
       :class="
         cn(
@@ -80,7 +75,6 @@ watch(() => route.fullPath, () => (mobileOpen.value = false))
 
     </aside>
 
-    <!-- Ngăn kéo trên màn hình nhỏ -->
     <Teleport to="body">
       <div v-if="mobileOpen" class="fixed inset-0 z-50 lg:hidden">
         <div class="absolute inset-0 bg-black/50" @click="mobileOpen = false" />

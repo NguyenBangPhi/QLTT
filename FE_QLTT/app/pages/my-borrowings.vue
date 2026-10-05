@@ -8,7 +8,6 @@ useHead({ title: 'Mượn trả của tôi · Thư viện Đại học' })
 
 const { data: history, isPending, error, refetch } = useBorrowHistory()
 
-/** sp_GetBorrowHistory trả về từng cuốn một, gom lại theo phiếu để hiển thị đúng ngữ cảnh */
 const phieuMuon = computed(() => {
   const groups = new Map<number, { MaPhieuMuon: number; NgayMuon: string; sach: BorrowHistoryItem[] }>()
   for (const row of history.value ?? []) {

@@ -20,7 +20,6 @@ export function useUpdateUserStatus() {
     onSuccess(res) {
       toast.success(res.message)
       qc.invalidateQueries({ queryKey: qk.users.all() })
-      // Danh sách sinh viên hiển thị kèm trạng thái tài khoản
       qc.invalidateQueries({ queryKey: qk.students.all() })
     },
   })

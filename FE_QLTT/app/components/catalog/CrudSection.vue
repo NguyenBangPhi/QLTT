@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
 
-/**
- * Tác giả và thể loại có cấu trúc hoàn toàn giống nhau (một khoá chính, một cột tên,
- * CRUD thuần) nên dùng chung một màn hình thay vì chép đôi.
- */
 const props = defineProps<{ resource: 'authors' | 'genres' }>()
 
 const authors = useAuthors()
@@ -35,7 +31,6 @@ const rows = computed<Row[]>(() => {
   return (genres.data.value ?? []).map((g) => ({ id: g.MaTheLoai, name: g.TenTheLoai }))
 })
 
-// --- Thêm / sửa ---
 const formOpen = ref(false)
 const editing = ref<Row | null>(null)
 const name = ref('')
@@ -76,7 +71,6 @@ function save() {
   }
 }
 
-// --- Xoá ---
 const deleting = ref<Row | null>(null)
 const deleteOpen = computed({
   get: () => deleting.value !== null,

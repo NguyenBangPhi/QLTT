@@ -27,7 +27,6 @@ const daHetHan = computed(() => soNgayConLai.value !== null && soNgayConLai.valu
       description="Thông tin thẻ và tình trạng sử dụng của bạn"
     />
 
-    <!-- Thẻ thư viện -->
     <div class="relative overflow-hidden rounded-2xl bg-primary p-6 text-primary-foreground shadow-lg">
       <div
         class="pointer-events-none absolute -top-16 -right-10 size-56 rounded-full bg-white/10"
@@ -65,7 +64,6 @@ const daHetHan = computed(() => soNgayConLai.value !== null && soNgayConLai.valu
       </div>
     </div>
 
-    <!-- Cảnh báo -->
     <div
       v-if="!theHoatDong"
       class="mt-4 flex gap-3 rounded-lg border border-danger-soft bg-danger-soft/50 p-4 text-danger-soft-foreground"
@@ -105,7 +103,6 @@ const daHetHan = computed(() => soNgayConLai.value !== null && soNgayConLai.valu
       </div>
     </div>
 
-    <!-- Thông tin sinh viên -->
     <UiCard class="mt-6 p-6">
       <h2 class="mb-4 font-semibold">Thông tin sinh viên</h2>
       <dl class="grid gap-x-8 gap-y-4 sm:grid-cols-2">

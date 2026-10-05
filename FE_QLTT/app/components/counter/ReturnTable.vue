@@ -3,10 +3,6 @@ import { RotateCcw, Search } from 'lucide-vue-next'
 import { estimateFine, formatCurrency, formatDate } from '~/lib/format'
 import type { BorrowingRow } from '~/types/api'
 
-/**
- * vw_SachDangMuon là nguồn duy nhất vừa có MaCTPM vừa lọc sẵn TrangThai = 1,
- * nên đây là chỗ đúng để thao tác trả sách.
- */
 const { data: rows, isPending, error, refetch } = useBorrowingBooks()
 
 const tienPhatMotNgay = useConfigNumber('TIEN_PHAT_MOT_NGAY', 5000)

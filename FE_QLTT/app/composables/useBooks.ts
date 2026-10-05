@@ -53,7 +53,6 @@ export function useUpdateBook() {
     onSuccess(res) {
       toast.success(res.message)
       qc.invalidateQueries({ queryKey: qk.books.all() })
-      // Trigger trg_AuditBook_Update ghi thêm dòng vào Log_HeThong
       qc.invalidateQueries({ queryKey: qk.logs.all() })
     },
   })

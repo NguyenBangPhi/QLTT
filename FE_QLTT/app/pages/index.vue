@@ -8,7 +8,6 @@ const keyword = ref('')
 const maTacGia = ref<number | ''>('')
 const maTheLoai = ref<number | ''>('')
 
-// sp_SearchBooks tìm đồng thời trên tên sách, ISBN và tên tác giả
 const debouncedKeyword = refDebounced(keyword, 300)
 
 const filter = computed(() => ({

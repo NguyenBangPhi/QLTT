@@ -19,11 +19,9 @@ export interface NavItem {
   label: string
   to: string
   icon: Component
-  /** Bỏ trống nghĩa là mọi vai trò trong khu vực đó đều thấy */
   roles?: TenVaiTro[]
 }
 
-/** Khu vực Client Site — dành cho sinh viên */
 export const clientNav: NavItem[] = [
   { label: 'Tra cứu sách', to: '/', icon: Search },
   { label: 'Thẻ thư viện', to: '/profile', icon: IdCard },
@@ -31,7 +29,6 @@ export const clientNav: NavItem[] = [
   { label: 'Thông báo', to: '/notifications', icon: Bell },
 ]
 
-/** Khu vực Admin Dashboard — dành cho thủ thư và admin */
 export const adminNav: NavItem[] = [
   { label: 'Tổng quan', to: '/admin', icon: LayoutDashboard },
   { label: 'Quầy mượn trả', to: '/admin/counter', icon: ClipboardList },

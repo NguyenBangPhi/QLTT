@@ -27,7 +27,6 @@ function toCsv(rows: BorrowingRow[]) {
 function exportCsv() {
   const rows = current.value.data.value ?? []
   if (!rows.length) return
-  // BOM để Excel nhận đúng UTF-8, nếu không tiếng Việt sẽ hiển thị sai
   const blob = new Blob(['﻿' + toCsv(rows)], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
@@ -72,7 +71,6 @@ const sorted = computed(() =>
         </TabsTrigger>
       </TabsList>
 
-      <!-- Hai tab dùng chung một bảng, chỉ khác nguồn dữ liệu, nên không tách TabsContent -->
       <div>
         <CommonQueryState
           :pending="current.isPending.value"

@@ -1,10 +1,3 @@
-/**
- * Đồng bộ tab đang mở với query param để tải lại trang vẫn giữ đúng tab, và để chia sẻ
- * được đường dẫn tới đúng tab mình đang xem.
- *
- * Dùng router.replace chứ không push: mỗi lần bấm tab mà thêm một mục vào lịch sử thì
- * nút quay lại của trình duyệt sẽ phải bấm rất nhiều lần mới rời được trang.
- */
 export function useTabQuery(validTabs: readonly string[], queryKey = 'tab') {
   const route = useRoute()
   const router = useRouter()
@@ -22,7 +15,6 @@ export function useTabQuery(validTabs: readonly string[], queryKey = 'tab') {
     router.replace({ query: { ...route.query, [queryKey]: value } })
   })
 
-  // Người dùng bấm quay lại hoặc dán đường dẫn khác vào thanh địa chỉ
   watch(
     () => route.query[queryKey],
     () => {

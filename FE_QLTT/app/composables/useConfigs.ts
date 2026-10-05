@@ -25,12 +25,6 @@ export function useUpdateConfig() {
   })
 }
 
-/**
- * Đọc một tham số kiểu số từ bảng CauHinh, có giá trị dự phòng khi chưa tải xong.
- *
- * Các con số này chỉ dùng để gợi ý trước cho người dùng (ngày hẹn trả mặc định, tiền phạt
- * dự kiến). Quyết định cuối cùng vẫn do Stored Procedure đưa ra.
- */
 export function useConfigNumber(key: string, fallback: number) {
   const { data } = useConfigs()
 

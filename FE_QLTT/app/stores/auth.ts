@@ -14,7 +14,6 @@ export const useAuthStore = defineStore('auth', () => {
   const isStudent = computed(() => role.value === 'Sinh viên')
   const isAuthenticated = computed(() => Boolean(token.value && user.value))
 
-  /** Trang mặc định sau khi đăng nhập, theo đúng hai khu vực của đặc tả */
   const homePath = computed(() => (isStaff.value ? '/admin' : '/'))
 
   function setToken(value: string) {
@@ -28,11 +27,6 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem(TOKEN_KEY)
   }
 
-  /**
-   * Hồ sơ người dùng luôn lấy từ GET /api/auth/me chứ không giải mã JWT ở client.
-   * Như vậy khi admin khoá tài khoản hoặc đổi vai trò, lần tải trang kế tiếp sẽ phản ánh
-   * đúng trạng thái thật thay vì tin vào token cũ.
-   */
   async function fetchMe() {
     const { $api } = useNuxtApp()
     user.value = await $api<CurrentUser>('/auth/me')
@@ -53,7 +47,6 @@ export const useAuthStore = defineStore('auth', () => {
     return navigateTo('/login')
   }
 
-  /** Khôi phục phiên khi tải lại trang. Token hỏng hoặc hết hạn thì xoá luôn. */
   async function init() {
     if (initialized.value) return
     token.value = localStorage.getItem(TOKEN_KEY)

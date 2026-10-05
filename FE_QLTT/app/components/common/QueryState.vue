@@ -2,10 +2,6 @@
 import { AlertTriangle, RotateCw } from 'lucide-vue-next'
 import { normalizeApiError } from '~/lib/api-error'
 
-/**
- * Gom ba trạng thái tải dữ liệu về một chỗ để mọi màn hình hành xử giống nhau:
- * đang tải thì hiện khung xương, lỗi thì hiện nút thử lại, rỗng thì hiện trạng thái rỗng.
- */
 const props = withDefaults(
   defineProps<{
     pending: boolean

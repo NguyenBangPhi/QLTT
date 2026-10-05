@@ -16,7 +16,6 @@ function toggle(id: number) {
   expanded.value = expanded.value === id ? null : id
 }
 
-/** Gộp khoá của giá trị cũ và mới để hiện đủ cả trường bị xoá lẫn trường mới thêm */
 function diffKeys(cu: Record<string, unknown> | null, moi: Record<string, unknown> | null) {
   return [...new Set([...Object.keys(cu ?? {}), ...Object.keys(moi ?? {})])]
 }

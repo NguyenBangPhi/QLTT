@@ -13,7 +13,6 @@ export function useLogs(
       $api<Paginated<SystemLog>>('/logs', {
         query: { page: toValue(page), limit: toValue(limit) },
       }),
-    // Giữ dữ liệu trang cũ khi chuyển trang để bảng không nhảy về trạng thái rỗng
     placeholderData: keepPreviousData,
   })
 }

@@ -14,7 +14,6 @@ const { data: books, isPending: pendingBooks } = useBooks()
 
 const hetTon = computed(() => (books.value ?? []).filter((b) => b.SoLuongTon <= 0).length)
 
-/** Quá hạn lâu nhất xếp trước — đây là việc thủ thư cần xử lý ngay */
 const quaHanNang = computed(() =>
   [...(quaHan.value ?? [])].sort((a, b) => b.SoNgayQuaHan - a.SoNgayQuaHan).slice(0, 8),
 )
