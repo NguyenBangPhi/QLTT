@@ -39,6 +39,9 @@ function exportCsv() {
 const sorted = computed(() =>
   [...(current.value.data.value ?? [])].sort((a, b) => b.SoNgayQuaHan - a.SoNgayQuaHan),
 )
+
+const { page, items: pagedRows, total, limit, reset } = usePagedList(sorted, 20)
+watch(tab, reset)
 </script>
 
 <template>
@@ -91,7 +94,7 @@ const sorted = computed(() =>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="row in sorted" :key="row.MaCTPM">
+              <tr v-for="row in pagedRows" :key="row.MaCTPM">
                 <td>
                   <p class="font-medium">{{ row.TenSinhVien }}</p>
                   <p class="font-mono text-xs text-muted-foreground">{{ row.MaSV }}</p>
@@ -109,6 +112,8 @@ const sorted = computed(() =>
               </tr>
             </tbody>
           </UiTable>
+
+          <CommonPagination v-model:page="page" :total="total" :limit="limit" />
         </CommonQueryState>
       </div>
     </TabsRoot>

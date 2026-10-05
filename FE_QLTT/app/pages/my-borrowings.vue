@@ -18,6 +18,8 @@ const phieuMuon = computed(() => {
   return [...groups.values()].sort((a, b) => b.MaPhieuMuon - a.MaPhieuMuon)
 })
 
+const { page, items: pagedPhieu, total, limit } = usePagedList(phieuMuon, 10)
+
 const dangGiu = computed(() => (history.value ?? []).filter((r) => r.TrangThai === 1))
 const quaHan = computed(() => dangGiu.value.filter((r) => borrowStatus(r) === 'overdue'))
 const tongPhat = computed(() =>
@@ -70,7 +72,7 @@ const tongPhat = computed(() =>
       </template>
 
       <div class="space-y-4">
-        <UiCard v-for="phieu in phieuMuon" :key="phieu.MaPhieuMuon" class="overflow-hidden">
+        <UiCard v-for="phieu in pagedPhieu" :key="phieu.MaPhieuMuon" class="overflow-hidden">
           <div class="flex flex-wrap items-center justify-between gap-2 border-b bg-muted/40 px-5 py-3">
             <p class="font-medium">Phiếu mượn #{{ phieu.MaPhieuMuon }}</p>
             <p class="text-sm text-muted-foreground">
@@ -107,6 +109,8 @@ const tongPhat = computed(() =>
           </ul>
         </UiCard>
       </div>
+
+      <CommonPagination v-model:page="page" :total="total" :limit="limit" />
     </CommonQueryState>
   </div>
 </template>

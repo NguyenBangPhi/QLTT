@@ -23,10 +23,16 @@ const filteredUsers = computed(() => {
   )
 })
 
+const userPage = reactive(usePagedList(filteredUsers, 20))
+watch(userKeyword, userPage.reset)
+
 const studentKeyword = ref('')
 const debouncedStudent = refDebounced(studentKeyword, 300)
 const students = useStudents(debouncedStudent)
 const updateCard = useUpdateCardStatus()
+
+const studentPage = reactive(usePagedList(students.data, 20))
+watch(debouncedStudent, studentPage.reset)
 </script>
 
 <template>
@@ -86,7 +92,7 @@ const updateCard = useUpdateCardStatus()
               </tr>
             </thead>
             <tbody>
-              <tr v-for="u in filteredUsers" :key="u.MaNguoiDung">
+              <tr v-for="u in userPage.items" :key="u.MaNguoiDung">
                 <td class="font-medium">{{ u.HoTen }}</td>
                 <td class="font-mono text-xs">{{ u.TenDangNhap }}</td>
                 <td class="max-w-52 truncate text-muted-foreground">{{ u.Email || '—' }}</td>
@@ -122,6 +128,12 @@ const updateCard = useUpdateCardStatus()
               </tr>
             </tbody>
           </UiTable>
+
+          <CommonPagination
+            v-model:page="userPage.page"
+            :total="userPage.total"
+            :limit="userPage.limit"
+          />
         </CommonQueryState>
       </TabsContent>
 
@@ -159,7 +171,7 @@ const updateCard = useUpdateCardStatus()
               </tr>
             </thead>
             <tbody>
-              <tr v-for="s in students.data.value" :key="s.MaSV">
+              <tr v-for="s in studentPage.items" :key="s.MaSV">
                 <td class="font-mono text-xs">{{ s.MaSV }}</td>
                 <td class="font-medium">{{ s.HoTen }}</td>
                 <td class="text-muted-foreground">{{ s.Lop }} · {{ s.Khoa }}</td>
@@ -183,6 +195,12 @@ const updateCard = useUpdateCardStatus()
               </tr>
             </tbody>
           </UiTable>
+
+          <CommonPagination
+            v-model:page="studentPage.page"
+            :total="studentPage.total"
+            :limit="studentPage.limit"
+          />
         </CommonQueryState>
       </TabsContent>
     </TabsRoot>

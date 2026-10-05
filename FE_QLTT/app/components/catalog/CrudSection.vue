@@ -31,6 +31,9 @@ const rows = computed<Row[]>(() => {
   return (genres.data.value ?? []).map((g) => ({ id: g.MaTheLoai, name: g.TenTheLoai }))
 })
 
+const { page, items: pagedRows, total, limit, reset } = usePagedList(rows, 20)
+watch(() => props.resource, reset)
+
 const formOpen = ref(false)
 const editing = ref<Row | null>(null)
 const name = ref('')
@@ -115,7 +118,7 @@ function confirmDelete() {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in rows" :key="row.id">
+          <tr v-for="row in pagedRows" :key="row.id">
             <td class="font-mono text-xs text-muted-foreground">{{ row.id }}</td>
             <td class="font-medium">{{ row.name }}</td>
             <td>
@@ -141,6 +144,8 @@ function confirmDelete() {
           </tr>
         </tbody>
       </UiTable>
+
+      <CommonPagination v-model:page="page" :total="total" :limit="limit" />
     </CommonQueryState>
 
     <UiDialog

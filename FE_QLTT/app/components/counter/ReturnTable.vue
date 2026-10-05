@@ -24,6 +24,9 @@ const filtered = computed(() => {
     .sort((a, b) => b.SoNgayQuaHan - a.SoNgayQuaHan)
 })
 
+const { page, items: pagedRows, total, limit, reset } = usePagedList(filtered, 20)
+watch([keyword, chiQuaHan], reset)
+
 const confirming = ref<BorrowingRow | null>(null)
 const dialogOpen = computed({
   get: () => confirming.value !== null,
@@ -90,7 +93,7 @@ function confirmReturn() {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in filtered" :key="row.MaCTPM">
+          <tr v-for="row in pagedRows" :key="row.MaCTPM">
             <td>
               <p class="font-medium">{{ row.TenSinhVien }}</p>
               <p class="font-mono text-xs text-muted-foreground">{{ row.MaSV }}</p>
@@ -119,6 +122,8 @@ function confirmReturn() {
           </tr>
         </tbody>
       </UiTable>
+
+      <CommonPagination v-model:page="page" :total="total" :limit="limit" />
     </CommonQueryState>
 
     <UiDialog

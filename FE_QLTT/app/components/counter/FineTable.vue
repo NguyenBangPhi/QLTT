@@ -21,7 +21,6 @@ watch(debouncedKeyword, () => {
 
 const { data, isPending, error, refetch } = useBorrowList(filter)
 const rows = computed(() => data.value?.data ?? [])
-const totalPages = computed(() => Math.max(1, Math.ceil((data.value?.total ?? 0) / LIMIT)))
 
 const editing = ref<BorrowDetail | null>(null)
 const tienPhat = ref<number | string>(0)
@@ -116,19 +115,7 @@ function save() {
         </tbody>
       </UiTable>
 
-      <div v-if="totalPages > 1" class="mt-4 flex items-center justify-between gap-3">
-        <p class="text-sm text-muted-foreground">
-          Trang {{ page }}/{{ totalPages }} · {{ data?.total }} bản ghi
-        </p>
-        <div class="flex gap-2">
-          <UiButton variant="outline" size="sm" :disabled="page <= 1" @click="page--">
-            Trước
-          </UiButton>
-          <UiButton variant="outline" size="sm" :disabled="page >= totalPages" @click="page++">
-            Sau
-          </UiButton>
-        </div>
-      </div>
+      <CommonPagination v-model:page="page" :total="data?.total" :limit="LIMIT" />
     </CommonQueryState>
 
     <UiDialog

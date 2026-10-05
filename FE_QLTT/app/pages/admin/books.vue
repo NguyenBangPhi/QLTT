@@ -18,6 +18,9 @@ const { data: books, isPending, error, refetch } = useBooks(filter)
 const { data: authors } = useAuthors()
 const { data: genres } = useGenres()
 
+const { page, items: pagedBooks, total, limit, reset } = usePagedList(books, 20)
+watch(filter, reset)
+
 const createBook = useCreateBook()
 const updateBook = useUpdateBook()
 const deleteBook = useDeleteBook()
@@ -170,7 +173,7 @@ function confirmDelete() {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="b in books" :key="b.MaSach">
+          <tr v-for="b in pagedBooks" :key="b.MaSach">
             <td class="font-mono text-xs">{{ b.ISBN }}</td>
             <td class="max-w-64 truncate font-medium">{{ b.TenSach }}</td>
             <td class="text-muted-foreground">{{ b.TenTacGia }}</td>
@@ -202,6 +205,8 @@ function confirmDelete() {
           </tr>
         </tbody>
       </UiTable>
+
+      <CommonPagination v-model:page="page" :total="total" :limit="limit" />
     </CommonQueryState>
 
     <UiDialog
