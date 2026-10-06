@@ -9,7 +9,6 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery, ApiConsumes, ApiBody } 
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
 
-/** Swagger không tự suy ra được body multipart, phải mô tả tay thì UI mới hiện nút chọn file */
 const FILE_UPLOAD_BODY = {
   schema: {
     type: 'object',
@@ -103,7 +102,9 @@ export class SystemController {
   @Roles('Admin')
   @ApiOperation({
     summary: 'Xuất dữ liệu ra file .xlsx',
-    description: 'Bốn sheet: Sach, SinhVien, NguoiDung, TheLoai. Cột MatKhau không được xuất.',
+    description:
+      'Hai sheet: TheLoai và Sach. Sheet Sach kèm TenTacGia, TenTheLoai để nhập lại khớp ' +
+      'được khoá ngoại theo tên.',
   })
   @Post('system/export')
   async export(@Res({ passthrough: true }) res: Response) {
@@ -117,10 +118,10 @@ export class SystemController {
 
   @Roles('Admin')
   @ApiOperation({
-    summary: 'Nhập sách từ file .xlsx',
+    summary: 'Nhập thể loại và sách từ file .xlsx',
     description:
-      'Chỉ đọc sheet "Sach" và gọi sp_AddBook cho từng dòng. Các sheet khác bị bỏ qua. ' +
-      'Trả về số dòng nhập được, số dòng lỗi và lý do của tối đa 20 dòng đầu.',
+      'Đọc sheet "TheLoai" rồi tới "Sach", chỉ thêm mới chứ không ghi đè. Sách đi qua ' +
+      'sp_AddBook. Trả về kết quả từng sheet kèm lý do của tối đa 20 dòng bị bỏ qua.',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody(FILE_UPLOAD_BODY)

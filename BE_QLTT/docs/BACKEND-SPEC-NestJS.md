@@ -182,16 +182,26 @@ Quyền **đọc** cấu hình mở cho cả Thủ thư vì màn quầy mượn 
 | POST | `/api/system/send-reminders` | `CALL sp_SendReminder()` | Admin (+ cron nội bộ) |
 | POST | `/api/system/backup` | Chạy `mysqldump --routines --triggers --events`, trả file `backup.sql` (`application/sql`, attachment). Không nhận body | Admin |
 | POST | `/api/system/restore` | `multipart/form-data`, field `file` (.sql). Bơm file vào stdin của `mysql` CLI. **Ghi đè toàn bộ dữ liệu hiện có** | Admin |
-| POST | `/api/system/export` | Trả file `export.xlsx` gồm 4 sheet `Sach`, `SinhVien`, `NguoiDung`, `TheLoai` | Admin |
-| POST | `/api/system/import` | `multipart/form-data`, field `file` (.xlsx). Đọc sheet `Sach`, gọi `sp_AddBook` từng dòng. Trả `{message, imported, skipped, errors[]}` | Admin |
+| POST | `/api/system/export` | Trả file `export.xlsx` gồm 2 sheet `TheLoai` và `Sach` | Admin |
+| POST | `/api/system/import` | `multipart/form-data`, field `file` (.xlsx). Đọc `TheLoai` rồi `Sach`, chỉ thêm mới. Trả `{message, sheets[]}` | Admin |
 
 **Yêu cầu môi trường.** `backup` và `restore` gọi `mysqldump` / `mysql` qua `child_process` chứ không qua `mysql2`, nên hai chương trình này phải có trong `PATH`. Trên image Alpine cần cả `mariadb-client` lẫn `mariadb-connector-c`: gói thứ hai mang plugin `caching_sha2_password` mà MySQL 8.4 dùng để xác thực.
 
 **Kết nối từ CLI.** Mật khẩu truyền qua biến môi trường `MYSQL_PWD`, không qua tham số `-p` và không chạy qua shell. Riêng client MariaDB cần thêm `--ssl-verify-server-cert=0` vì MySQL 8.4 dùng chứng chỉ tự ký; client của MySQL không có cờ này nên Backend dò `mysqldump --version` một lần để biết đang chạy với client nào.
 
-**Phạm vi của export.** Bốn sheet `Sach`, `SinhVien`, `NguoiDung`, `TheLoai`. Cột `MatKhau` của `NguoiDung` nằm ngoài danh sách xuất.
+**Phạm vi của export.** Hai sheet, xếp theo đúng thứ tự mà import đọc: `TheLoai` trước, `Sach` sau. Sheet `Sach` lấy thêm `TenTacGia` và `TenTheLoai` qua `JOIN`, không chỉ các cột gốc của bảng.
 
-**Phạm vi của import.** Chỉ đọc sheet `Sach`, mỗi dòng gọi `sp_AddBook` để nghiệp vụ vẫn do tầng DB quyết định. Cột bắt buộc: `ISBN`, `TenSach`, `MaTacGia`, `MaTheLoai`, `SoLuongTong`. Sheet `SinhVien` không được nhập vì tạo sinh viên còn kéo theo tài khoản `NguoiDung` kèm mật khẩu, thông tin đó không có trong file Excel. Dòng lỗi không làm dừng cả lượt nhập: mỗi dòng hỏng được ghi lại kèm lý do tiếng Việt và trả về trong `errors[]` (tối đa 20 dòng đầu).
+**Phạm vi của import.** Đọc `TheLoai` rồi tới `Sach` — đúng thứ tự này thì thể loại mới kịp tồn tại cho sách tham chiếu. Chỉ **thêm mới**, không ghi đè: bản ghi đã tồn tại thì bỏ qua và nêu lý do.
+
+Khoá ngoại khớp **theo tên**, không theo ID trong file, vì `MaTheLoai` và `MaTacGia` là auto-increment của database đã xuất ra và sẽ lệch khi nạp sang máy khác:
+
+- `TenTheLoai` → tra bảng `TheLoai`, chưa có thì tạo mới (thể loại nằm trong phạm vi import).
+- `TenTacGia` → tra bảng `TacGia`, chưa có thì **báo lỗi dòng đó**, không tự tạo, vì `TacGia` nằm ngoài phạm vi hai bảng.
+- Thiếu cả hai cột tên thì lùi về đọc `MaTheLoai` / `MaTacGia`, để file xuất từ bản cũ vẫn nạp được.
+
+Mỗi dòng sách vẫn đi qua `sp_AddBook` để nghiệp vụ do tầng DB quyết định. Cột bắt buộc của sheet `Sach`: `ISBN`, `TenSach`, `SoLuongTong`, cộng một trong hai cột tác giả và một trong hai cột thể loại. Dòng hỏng không làm dừng cả lượt nhập.
+
+Kết quả trả về tách theo từng sheet: `{ message, sheets: [{ sheet, imported, skipped, errors[] }] }`, mỗi sheet giữ tối đa 20 lý do đầu tiên.
 
 **Validate đầu vào.** Thiếu file, sai phần mở rộng hoặc file rỗng → `400`. Giới hạn kích thước upload 50 MB.
 
@@ -309,4 +319,5 @@ Tổng hợp các bẫy đã gặp thật, ghi lại để người sau không m
 | `POST /api/borrow` | `sp_BorrowBook` không kiểm tra mảng sách rỗng và không kiểm tra ngày hẹn trả — xem mục 4.3 |
 | `affectedRows` | MySQL trả `0` cả khi bản ghi tồn tại nhưng giá trị không đổi, đừng dùng để kết luận "không tìm thấy" |
 | `mysqldump` trong image | Chỉ cài `mariadb-client` là chưa đủ, thiếu `mariadb-connector-c` thì hỏng xác thực với MySQL 8.4 — xem mục 4.5 |
-| Export ra Excel | Quên loại cột `MatKhau` là phát tán hash mật khẩu của mọi người dùng — xem mục 4.5 |
+| Import Excel | Khớp khoá ngoại theo `MaTheLoai` trong file sẽ gán sách sai thể loại khi nạp sang database khác, phải khớp theo tên — xem mục 4.5 |
+| Mở rộng export | Thêm lại bảng `NguoiDung` thì nhớ loại cột `MatKhau`, nếu không là phát tán hash mật khẩu của mọi người dùng |

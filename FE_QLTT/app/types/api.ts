@@ -151,9 +151,14 @@ export interface MessageResponse {
   message: string
 }
 
-export interface ImportResult {
-  message: string
+export interface ImportSheetResult {
+  sheet: string
   imported: number
   skipped: number
   errors: string[]
+}
+
+export interface ImportResult {
+  message: string
+  sheets: ImportSheetResult[]
 }

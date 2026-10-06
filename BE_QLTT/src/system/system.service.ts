@@ -12,7 +12,27 @@ import { promisify } from 'util';
 
 const execFileAsync = promisify(execFile);
 
-/** Lỗi của từng dòng import phải đọc được, không để nguyên câu tiếng Anh của MySQL */
+export interface SheetResult {
+  sheet: string;
+  imported: number;
+  skipped: number;
+  errors: string[];
+}
+
+function sheetReader(sheet: ExcelJS.Worksheet) {
+  const columnOf = new Map<string, number>();
+  sheet.getRow(1).eachCell((cell, col) => columnOf.set(String(cell.value ?? '').trim(), col));
+
+  return {
+    has: (name: string) => columnOf.has(name),
+    valueAt(row: ExcelJS.Row, name: string) {
+      const col = columnOf.get(name);
+      const value = col ? row.getCell(col).value : null;
+      return value === null || value === undefined || value === '' ? null : value;
+    },
+  };
+}
+
 function importRowMessage(err: any): string {
   if (err?.sqlState === '45000') return err.sqlMessage;
   if (err?.code === 'ER_DUP_ENTRY') return 'ISBN đã tồn tại trong hệ thống.';
@@ -96,11 +116,6 @@ export class SystemService {
 
   private cliSslArgs: string[] | null = null;
 
-  /**
-   * Client MariaDB (gói trong image Alpine) mặc định xác minh chứng chỉ máy chủ, trong khi
-   * MySQL 8.4 dùng chứng chỉ tự ký nên kết nối bị từ chối. Client của chính MySQL lại không
-   * có cờ này và sẽ báo lỗi tham số, nên phải dò xem đang dùng client nào.
-   */
   private async clientSslArgs(): Promise<string[]> {
     if (this.cliSslArgs) return this.cliSslArgs;
     try {
@@ -114,8 +129,6 @@ export class SystemService {
 
   async backupDatabase(): Promise<string> {
     const { host, user, password, database } = this.dbConfig();
-    // Mật khẩu đi qua MYSQL_PWD thay vì -p: không lộ trong danh sách tiến trình và không
-    // phải lo thoát ký tự đặc biệt. execFile không qua shell nên cũng không có injection.
     const args = [
       '-h', host,
       '-u', user,
@@ -153,7 +166,6 @@ export class SystemService {
       let stderr = '';
       proc.stderr.on('data', (chunk) => (stderr += chunk.toString()));
 
-      // Thiếu binary thì spawn không ném lỗi đồng bộ, chỉ phát sự kiện 'error'
       proc.on('error', (err) => {
         this.logger.error(`Không chạy được mysql CLI: ${err.message}`);
         reject(
@@ -175,43 +187,175 @@ export class SystemService {
         }
       });
 
-      // Tiến trình chết sớm làm stdin văng EPIPE, đã báo lỗi ở 'close' rồi
       proc.stdin.on('error', () => undefined);
       proc.stdin.end(file.buffer);
     });
   }
 
-  /** Cột tuyệt đối không được xuất ra file: hash mật khẩu của toàn bộ người dùng */
-  private static readonly EXPORT_BLOCKLIST: Record<string, string[]> = {
-    NguoiDung: ['MatKhau'],
-  };
+  private addSheet(wb: ExcelJS.Workbook, name: string, rows: any[]) {
+    const sheet = wb.addWorksheet(name);
+    if (!rows.length) return;
+    sheet.columns = Object.keys(rows[0]).map((key) => ({ header: key, key }));
+    sheet.addRows(rows);
+  }
 
   async exportData(): Promise<ExcelJS.Buffer> {
     const wb = new ExcelJS.Workbook();
 
-    for (const table of ['Sach', 'SinhVien', 'NguoiDung', 'TheLoai']) {
-      const sheet = wb.addWorksheet(table);
-      const rows = await this.db.query<any[]>(`SELECT * FROM ${table}`);
-      if (!rows.length) continue;
-
-      const blocked = SystemService.EXPORT_BLOCKLIST[table] ?? [];
-      sheet.columns = Object.keys(rows[0])
-        .filter((key) => !blocked.includes(key))
-        .map((key) => ({ header: key, key }));
-      sheet.addRows(rows);
-    }
+    this.addSheet(wb, 'TheLoai', await this.db.query<any[]>('SELECT * FROM TheLoai'));
+    this.addSheet(
+      wb,
+      'Sach',
+      await this.db.query<any[]>(
+        `SELECT s.*, t.TenTacGia, tl.TenTheLoai
+         FROM Sach s
+         JOIN TacGia t ON t.MaTacGia = s.MaTacGia
+         JOIN TheLoai tl ON tl.MaTheLoai = s.MaTheLoai`,
+      ),
+    );
 
     return wb.xlsx.writeBuffer();
   }
 
-  /**
-   * Chỉ nhập sheet "Sach", qua sp_AddBook để giữ nguyên nghiệp vụ ở tầng DB (chặn ISBN
-   * trùng, đồng bộ tồn kho). Các sheet khác bị bỏ qua: thêm sinh viên còn kéo theo việc
-   * tạo tài khoản NguoiDung kèm mật khẩu, không suy ra được từ file Excel.
-   */
+  private async genreIdByName(name: string): Promise<number | null> {
+    const rows = await this.db.query<any[]>(
+      'SELECT MaTheLoai FROM TheLoai WHERE TenTheLoai = ? LIMIT 1',
+      [name],
+    );
+    return rows.length ? Number(rows[0].MaTheLoai) : null;
+  }
+
+  private async authorIdByName(name: string): Promise<number | null> {
+    const rows = await this.db.query<any[]>(
+      'SELECT MaTacGia FROM TacGia WHERE TenTacGia = ? LIMIT 1',
+      [name],
+    );
+    return rows.length ? Number(rows[0].MaTacGia) : null;
+  }
+
+  private async importGenreSheet(sheet: ExcelJS.Worksheet): Promise<SheetResult> {
+    const reader = sheetReader(sheet);
+    if (!reader.has('TenTheLoai')) {
+      throw new BadRequestException('Sheet "TheLoai" thiếu cột: TenTheLoai');
+    }
+
+    const result: SheetResult = { sheet: 'TheLoai', imported: 0, skipped: 0, errors: [] };
+
+    for (let r = 2; r <= sheet.rowCount; r++) {
+      const raw = reader.valueAt(sheet.getRow(r), 'TenTheLoai');
+      if (!raw) continue;
+      const name = String(raw).trim();
+
+      try {
+        if ((await this.genreIdByName(name)) !== null) {
+          result.skipped++;
+          result.errors.push(`Dòng ${r}: thể loại "${name}" đã có, bỏ qua.`);
+          continue;
+        }
+        await this.db.query('INSERT INTO TheLoai (TenTheLoai) VALUES (?)', [name]);
+        result.imported++;
+      } catch (err: any) {
+        result.skipped++;
+        result.errors.push(`Dòng ${r} ("${name}"): ${importRowMessage(err)}`);
+      }
+    }
+
+    result.errors = result.errors.slice(0, 20);
+    return result;
+  }
+
+  private async importBookSheet(sheet: ExcelJS.Worksheet): Promise<SheetResult> {
+    const reader = sheetReader(sheet);
+
+    const missing = ['ISBN', 'TenSach', 'SoLuongTong'].filter((name) => !reader.has(name));
+    if (!reader.has('TenTacGia') && !reader.has('MaTacGia')) missing.push('TenTacGia hoặc MaTacGia');
+    if (!reader.has('TenTheLoai') && !reader.has('MaTheLoai'))
+      missing.push('TenTheLoai hoặc MaTheLoai');
+    if (missing.length) {
+      throw new BadRequestException(`Sheet "Sach" thiếu cột: ${missing.join(', ')}`);
+    }
+
+    const result: SheetResult = { sheet: 'Sach', imported: 0, skipped: 0, errors: [] };
+
+    for (let r = 2; r <= sheet.rowCount; r++) {
+      const row = sheet.getRow(r);
+      const valueOf = (name: string) => reader.valueAt(row, name);
+
+      const isbn = valueOf('ISBN');
+      if (!isbn) continue;
+
+      try {
+        const tenTheLoai = valueOf('TenTheLoai');
+        let maTheLoai: number;
+        if (tenTheLoai) {
+          const name = String(tenTheLoai).trim();
+          const found = await this.genreIdByName(name);
+          if (found !== null) {
+            maTheLoai = found;
+          } else {
+            const inserted = await this.db.query(
+              'INSERT INTO TheLoai (TenTheLoai) VALUES (?)',
+              [name],
+            );
+            maTheLoai = Number((inserted as any).insertId);
+          }
+        } else {
+          maTheLoai = Number(valueOf('MaTheLoai'));
+        }
+
+        const tenTacGia = valueOf('TenTacGia');
+        let maTacGia: number;
+        if (tenTacGia) {
+          const name = String(tenTacGia).trim();
+          const found = await this.authorIdByName(name);
+          if (found === null) {
+            result.skipped++;
+            result.errors.push(
+              `Dòng ${r} (ISBN ${isbn}): tác giả "${name}" chưa có trong hệ thống.`,
+            );
+            continue;
+          }
+          maTacGia = found;
+        } else {
+          maTacGia = Number(valueOf('MaTacGia'));
+        }
+
+        const soLuong = Number(valueOf('SoLuongTong') ?? 0);
+        if (
+          !Number.isInteger(maTacGia) ||
+          !Number.isInteger(maTheLoai) ||
+          !Number.isInteger(soLuong) ||
+          soLuong < 0
+        ) {
+          result.skipped++;
+          result.errors.push(
+            `Dòng ${r} (ISBN ${isbn}): mã tác giả, mã thể loại và số lượng phải là số nguyên không âm.`,
+          );
+          continue;
+        }
+
+        await this.db.callProcedure('sp_AddBook', [
+          String(isbn),
+          String(valueOf('TenSach') ?? ''),
+          maTacGia,
+          maTheLoai,
+          valueOf('NhaXuatBan') === null ? null : String(valueOf('NhaXuatBan')),
+          valueOf('NamXuatBan') === null ? null : Number(valueOf('NamXuatBan')),
+          soLuong,
+        ]);
+        result.imported++;
+      } catch (err: any) {
+        result.skipped++;
+        result.errors.push(`Dòng ${r} (ISBN ${isbn}): ${importRowMessage(err)}`);
+      }
+    }
+
+    result.errors = result.errors.slice(0, 20);
+    return result;
+  }
+
   async importData(file: Express.Multer.File) {
     const wb = new ExcelJS.Workbook();
-    // exceljs nhận ArrayBuffer, Buffer của Node là Uint8Array nên không khớp kiểu
     const data = file.buffer.buffer.slice(
       file.buffer.byteOffset,
       file.buffer.byteOffset + file.buffer.byteLength,
@@ -223,73 +367,25 @@ export class SystemService {
       throw new BadRequestException('Không đọc được file Excel. Kiểm tra lại định dạng .xlsx.');
     }
 
-    const sheet = wb.getWorksheet('Sach');
-    if (!sheet) {
+    const genreSheet = wb.getWorksheet('TheLoai');
+    const bookSheet = wb.getWorksheet('Sach');
+    if (!genreSheet && !bookSheet) {
       throw new BadRequestException(
-        'File không có sheet tên "Sach". Hãy dùng file tải về từ chức năng Xuất dữ liệu.',
+        'File không có sheet "TheLoai" hay "Sach". Hãy dùng file tải về từ chức năng Xuất dữ liệu.',
       );
     }
 
-    const columnOf = new Map<string, number>();
-    sheet.getRow(1).eachCell((cell, col) => columnOf.set(String(cell.value ?? '').trim(), col));
+    const sheets: SheetResult[] = [];
+    if (genreSheet) sheets.push(await this.importGenreSheet(genreSheet));
+    if (bookSheet) sheets.push(await this.importBookSheet(bookSheet));
 
-    const required = ['ISBN', 'TenSach', 'MaTacGia', 'MaTheLoai', 'SoLuongTong'];
-    const missing = required.filter((name) => !columnOf.has(name));
-    if (missing.length) {
-      throw new BadRequestException(`Sheet "Sach" thiếu cột: ${missing.join(', ')}`);
-    }
+    const imported = sheets.reduce((sum, s) => sum + s.imported, 0);
+    const skipped = sheets.reduce((sum, s) => sum + s.skipped, 0);
+    this.logger.log(`Import: thêm ${imported} bản ghi, bỏ qua ${skipped} dòng`);
 
-    const errors: string[] = [];
-    let imported = 0;
-
-    for (let r = 2; r <= sheet.rowCount; r++) {
-      const row = sheet.getRow(r);
-      const valueOf = (name: string) => {
-        const col = columnOf.get(name);
-        const value = col ? row.getCell(col).value : null;
-        return value === null || value === undefined || value === '' ? null : value;
-      };
-
-      const isbn = valueOf('ISBN');
-      if (!isbn) continue;
-
-      const maTacGia = Number(valueOf('MaTacGia'));
-      const maTheLoai = Number(valueOf('MaTheLoai'));
-      const soLuong = Number(valueOf('SoLuongTong') ?? 0);
-      if (
-        !Number.isInteger(maTacGia) ||
-        !Number.isInteger(maTheLoai) ||
-        !Number.isInteger(soLuong) ||
-        soLuong < 0
-      ) {
-        errors.push(
-          `Dòng ${r} (ISBN ${isbn}): MaTacGia, MaTheLoai, SoLuongTong phải là số nguyên không âm.`,
-        );
-        continue;
-      }
-
-      try {
-        await this.db.callProcedure('sp_AddBook', [
-          String(isbn),
-          String(valueOf('TenSach') ?? ''),
-          maTacGia,
-          maTheLoai,
-          valueOf('NhaXuatBan') === null ? null : String(valueOf('NhaXuatBan')),
-          valueOf('NamXuatBan') === null ? null : Number(valueOf('NamXuatBan')),
-          soLuong,
-        ]);
-        imported++;
-      } catch (err: any) {
-        errors.push(`Dòng ${r} (ISBN ${isbn}): ${importRowMessage(err)}`);
-      }
-    }
-
-    this.logger.log(`Import: thêm ${imported} sách, ${errors.length} dòng lỗi`);
     return {
-      message: `Đã nhập ${imported} sách${errors.length ? `, bỏ qua ${errors.length} dòng lỗi` : ''}.`,
-      imported,
-      skipped: errors.length,
-      errors: errors.slice(0, 20),
+      message: `Đã nhập ${imported} bản ghi${skipped ? `, bỏ qua ${skipped} dòng` : ''}.`,
+      sheets,
     };
   }
 }

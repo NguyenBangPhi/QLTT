@@ -74,9 +74,11 @@ export function useDataTransfer() {
   const importBooks = useMutation({
     mutationFn: (file: File) => upload<ImportResult>('/system/import', file),
     onSuccess(res) {
-      if (res.imported > 0) toast.success(res.message)
+      const imported = res.sheets.reduce((sum, s) => sum + s.imported, 0)
+      if (imported > 0) toast.success(res.message)
       else toast.warning(res.message)
       qc.invalidateQueries({ queryKey: qk.books.all() })
+      qc.invalidateQueries({ queryKey: qk.genres.all() })
       qc.invalidateQueries({ queryKey: qk.logs.all() })
     },
   })

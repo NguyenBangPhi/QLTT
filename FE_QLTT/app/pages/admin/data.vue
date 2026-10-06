@@ -4,6 +4,7 @@ import {
   FileSpreadsheet,
   HardDriveDownload,
   HardDriveUpload,
+  Info,
   TriangleAlert,
   Upload,
 } from 'lucide-vue-next'
@@ -36,8 +37,8 @@ function runImport() {
       description="Sao lưu toàn bộ database, phục hồi từ file .sql, xuất và nhập dữ liệu bằng Excel"
     />
 
-    <div class="grid gap-4 lg:grid-cols-2">
-      <UiCard class="flex flex-col p-5">
+    <div class="grid items-start gap-4 lg:grid-cols-2">
+      <UiCard class="p-5">
         <div class="flex items-center gap-2 font-semibold">
           <HardDriveDownload class="size-4" aria-hidden="true" />
           Sao lưu database
@@ -46,15 +47,32 @@ function runImport() {
           Tải về một file <code class="font-mono text-xs">.sql</code> chứa toàn bộ bảng, dữ liệu,
           view, stored procedure, function và trigger.
         </p>
-        <div class="mt-auto">
-          <UiButton :loading="backup.isPending.value" @click="backup.mutate()">
-            <Download v-if="!backup.isPending.value" aria-hidden="true" />
-            Tải file sao lưu
-          </UiButton>
-        </div>
+        <UiButton :loading="backup.isPending.value" @click="backup.mutate()">
+          <Download v-if="!backup.isPending.value" aria-hidden="true" />
+          Tải file sao lưu
+        </UiButton>
       </UiCard>
 
-      <UiCard class="flex flex-col border-danger-soft p-5">
+      <UiCard class="p-5">
+        <div class="flex items-center gap-2 font-semibold">
+          <FileSpreadsheet class="size-4" aria-hidden="true" />
+          Xuất dữ liệu ra Excel
+        </div>
+        <p class="mt-1 mb-4 text-sm text-muted-foreground">
+          Tải về toàn bộ thể loại và sách dưới dạng file
+          <code class="font-mono text-xs">.xlsx</code>, mỗi bảng một sheet.
+        </p>
+        <UiButton
+          variant="outline"
+          :loading="exportData.isPending.value"
+          @click="exportData.mutate()"
+        >
+          <Download v-if="!exportData.isPending.value" aria-hidden="true" />
+          Tải file Excel
+        </UiButton>
+      </UiCard>
+
+      <UiCard class="border-danger-soft p-5">
         <div class="flex items-center gap-2 font-semibold">
           <HardDriveUpload class="size-4" aria-hidden="true" />
           Phục hồi database
@@ -71,100 +89,74 @@ function runImport() {
         </div>
 
         <div class="mt-4 mb-3">
-          <UiFileInput
-            v-model="restoreFile"
-            accept=".sql"
-            :disabled="restore.isPending.value"
-          />
+          <UiFileInput v-model="restoreFile" accept=".sql" :disabled="restore.isPending.value" />
         </div>
 
-        <div class="mt-auto">
-          <UiButton
-            variant="destructive"
-            :disabled="!restoreFile"
-            :loading="restore.isPending.value"
-            @click="confirmRestore = true"
-          >
-            <Upload v-if="!restore.isPending.value" aria-hidden="true" />
-            Phục hồi
-          </UiButton>
-        </div>
+        <UiButton
+          variant="destructive"
+          :disabled="!restoreFile"
+          :loading="restore.isPending.value"
+          @click="confirmRestore = true"
+        >
+          <Upload v-if="!restore.isPending.value" aria-hidden="true" />
+          Phục hồi
+        </UiButton>
       </UiCard>
 
-      <UiCard class="flex flex-col p-5">
-        <div class="flex items-center gap-2 font-semibold">
-          <FileSpreadsheet class="size-4" aria-hidden="true" />
-          Xuất dữ liệu ra Excel
-        </div>
-        <p class="mt-1 mb-4 text-sm text-muted-foreground">
-          Bốn sheet: Sach, SinhVien, NguoiDung, TheLoai. Cột mật khẩu không được xuất.
-        </p>
-        <div class="mt-auto">
-          <UiButton
-            variant="outline"
-            :loading="exportData.isPending.value"
-            @click="exportData.mutate()"
-          >
-            <Download v-if="!exportData.isPending.value" aria-hidden="true" />
-            Tải file Excel
-          </UiButton>
-        </div>
-      </UiCard>
-
-      <UiCard class="flex flex-col p-5">
+      <UiCard class="p-5">
         <div class="flex items-center gap-2 font-semibold">
           <Upload class="size-4" aria-hidden="true" />
-          Nhập sách từ Excel
+          Nhập dữ liệu từ Excel
         </div>
         <p class="mt-1 text-sm text-muted-foreground">
-          Chỉ đọc sheet <strong>Sach</strong>, cần đủ các cột ISBN, TenSach, MaTacGia, MaTheLoai,
-          SoLuongTong. Các sheet khác được bỏ qua.
+          Thêm thể loại và sách từ file <code class="font-mono text-xs">.xlsx</code>.
         </p>
 
+        <div class="mt-3 flex gap-2 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">
+          <Info class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>Chỉ thêm bản ghi mới, dữ liệu đang có không bị thay đổi.</span>
+        </div>
+
         <div class="mt-4 mb-3">
-          <UiFileInput
-            v-model="importFile"
-            accept=".xlsx"
-            :disabled="importBooks.isPending.value"
-          />
+          <UiFileInput v-model="importFile" accept=".xlsx" :disabled="importBooks.isPending.value" />
         </div>
 
-        <div>
-          <UiButton
-            variant="outline"
-            :disabled="!importFile"
-            :loading="importBooks.isPending.value"
-            @click="runImport"
+        <UiButton
+          variant="outline"
+          :disabled="!importFile"
+          :loading="importBooks.isPending.value"
+          @click="runImport"
+        >
+          <Upload v-if="!importBooks.isPending.value" aria-hidden="true" />
+          Nhập dữ liệu
+        </UiButton>
+
+        <div v-if="importBooks.data.value" class="mt-4 space-y-3">
+          <div
+            v-for="sheet in importBooks.data.value.sheets"
+            :key="sheet.sheet"
+            class="rounded-lg border p-3 text-sm"
           >
-            <Upload v-if="!importBooks.isPending.value" aria-hidden="true" />
-            Nhập dữ liệu
-          </UiButton>
-        </div>
+            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
+              <strong>{{ sheet.sheet }}</strong>
+              <span>
+                Nhập được
+                <strong class="text-success-soft-foreground">{{ sheet.imported }}</strong>
+              </span>
+              <span v-if="sheet.skipped">
+                Bỏ qua
+                <strong class="text-danger-soft-foreground">{{ sheet.skipped }}</strong>
+                dòng
+              </span>
+            </div>
 
-        <div v-if="importBooks.data.value" class="mt-4 rounded-lg border p-3 text-sm">
-          <div class="flex flex-wrap gap-4">
-            <span>
-              Nhập được
-              <strong class="text-success-soft-foreground">
-                {{ importBooks.data.value.imported }}
-              </strong>
-              sách
-            </span>
-            <span v-if="importBooks.data.value.skipped">
-              Bỏ qua
-              <strong class="text-danger-soft-foreground">
-                {{ importBooks.data.value.skipped }}
-              </strong>
-              dòng
-            </span>
+            <ul
+              v-if="sheet.errors.length"
+              class="mt-2 max-h-40 space-y-1 overflow-y-auto border-t pt-2 text-xs text-muted-foreground"
+            >
+              <li v-for="(line, i) in sheet.errors" :key="i">{{ line }}</li>
+            </ul>
           </div>
-
-          <ul
-            v-if="importBooks.data.value.errors.length"
-            class="mt-2 max-h-48 space-y-1 overflow-y-auto border-t pt-2 text-xs text-muted-foreground"
-          >
-            <li v-for="(line, i) in importBooks.data.value.errors" :key="i">{{ line }}</li>
-          </ul>
         </div>
       </UiCard>
     </div>
@@ -181,7 +173,7 @@ function runImport() {
         >.
       </p>
       <p class="mt-3 text-sm text-muted-foreground">
-        Nên bấm <strong>Tải file sao lưu</strong> trước để còn đường quay lại.
+        Hãy chắc chắn bạn đã có bản sao lưu gần nhất trước khi tiếp tục.
       </p>
 
       <template #footer>

@@ -11,7 +11,7 @@ Chạy cùng cả hệ thống bằng `docker compose up -d` ở thư mục cha.
 | Khu vực | Layout | Vai trò | Trang |
 |---|---|---|---|
 | Client Site | `client` | Sinh viên | Tra cứu sách, chi tiết sách, thẻ thư viện, mượn trả của tôi, thông báo |
-| Admin Dashboard | `admin` | Thủ thư + Admin | Tổng quan, quầy mượn trả, sách, tác giả, thể loại, báo cáo |
+| Admin Dashboard | `admin` | Thủ thư + Admin | Tổng quan, quầy mượn trả, sách, tác giả, thể loại, báo cáo, báo cáo Power BI |
 | | | Chỉ Admin | Tài khoản & thẻ, tham số hệ thống, sao lưu & dữ liệu, nhật ký hệ thống |
 
 ## Cấu trúc
