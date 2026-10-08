@@ -16,21 +16,21 @@ export const POWER_BI_HEIGHT = 541.25
 
 export const powerBiReports: PowerBiReport[] = [
   {
-    key: 'nguoi-muon',
-    label: 'Chi tiết người mượn sách',
-    title: 'ChiTietNguoiMuonSach',
-    src: embedUrl('b2984105-82a2-4f7d-9e2b-6fce3a2bdb8c'),
+    key: 'theo-the-loai',
+    label: 'Lượt mượn theo thể loại',
+    title: 'DA-SoLuotMuonTheoTheLoaiSach',
+    src: embedUrl('a1caab54-ab55-482d-8d35-76f9c665ab56'),
   },
   {
-    key: 'phat-qua-han',
-    label: 'Danh sách phạt và quá hạn',
-    title: 'DanhSachPhatVaQuaHan',
-    src: embedUrl('721954be-d865-4508-b097-ad2f8bc57f00'),
+    key: 'giua-cac-khoa',
+    label: 'Mượn trả giữa các khoa',
+    title: 'DA-TinhTrangMuonTraGiuaCacKhoa',
+    src: embedUrl('e10a6310-daf2-44a8-8387-d89145e24ec3'),
   },
   {
-    key: 'do-hot',
-    label: 'Đo lường độ HOT của sách',
-    title: 'DoLuongDoHotCuaSach',
-    src: embedUrl('1486c80b-c114-4e91-923b-3ed1251e785e'),
+    key: 'xu-huong-thoi-gian',
+    label: 'Xu hướng mượn theo thời gian',
+    title: 'DA-XuHuongSoLuotMuonTheoThoiGian',
+    src: embedUrl('131e9e7f-4fbc-4f49-844b-83e91327d560'),
   },
 ]
