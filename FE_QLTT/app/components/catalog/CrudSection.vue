@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Pencil, Plus, Trash2 } from 'lucide-vue-next'
+import { Pencil, Plus, RotateCw, Trash2 } from 'lucide-vue-next'
 
 const props = defineProps<{ resource: 'authors' | 'genres' }>()
 
@@ -95,6 +95,14 @@ function confirmDelete() {
       :description="`Quản lý danh mục ${meta.label} dùng cho việc phân loại sách`"
     >
       <template #actions>
+        <UiButton
+          variant="outline"
+          :loading="query.isFetching.value"
+          @click="query.refetch()"
+        >
+          <RotateCw v-if="!query.isFetching.value" aria-hidden="true" />
+          Làm mới
+        </UiButton>
         <UiButton @click="openCreate">
           <Plus aria-hidden="true" />
           Thêm {{ meta.label }}

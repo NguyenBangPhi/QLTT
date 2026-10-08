@@ -5,6 +5,12 @@ import { MysqlExceptionFilter } from './common/filters/mysql-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
+  if (!process.env.JWT_SECRET?.trim()) {
+    throw new Error(
+      'Thiếu biến môi trường JWT_SECRET. Sao chép .env.example thành .env và đặt một chuỗi bí mật riêng.',
+    );
+  }
+
   const app = await NestFactory.create(AppModule);
 
   const corsOrigin = process.env.CORS_ORIGIN;

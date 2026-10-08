@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { clampPaging } from '../common/pagination';
 import { BorrowBookDto } from './dto/borrow-book.dto';
 import { ReturnBookDto } from './dto/return-book.dto';
 import { UpdateFineDto } from './dto/update-fine.dto';
@@ -122,7 +123,7 @@ export class BorrowService {
     const countRows = await this.db.query<any[]>(`SELECT COUNT(*) AS total ${from}`, params);
     const total = Number(countRows[0].total);
 
-    const offset = (filter.page - 1) * filter.limit;
+    const { page, limit, offset } = clampPaging(filter.page, filter.limit);
     const data = await this.db.query(
       `SELECT ct.MaCTPM, ct.MaPhieuMuon, ct.MaSach, ct.NgayHenTra, ct.NgayTraThucTe,
               ct.TienPhat, ct.TrangThai,
@@ -134,10 +135,10 @@ export class BorrowService {
        ${from}
        ORDER BY pm.NgayMuon DESC, ct.MaCTPM DESC
        LIMIT ? OFFSET ?`,
-      [...params, filter.limit, offset],
+      [...params, limit, offset],
     );
 
-    return { data, total, page: filter.page, limit: filter.limit };
+    return { data, total, page, limit };
   }
 
   async getBorrowHistory(maSV: string) {

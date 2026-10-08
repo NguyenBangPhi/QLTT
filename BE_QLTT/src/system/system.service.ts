@@ -3,9 +3,11 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DatabaseService } from '../database/database.service';
+import { clampPaging } from '../common/pagination';
 import * as ExcelJS from 'exceljs';
 import { execFile, spawn } from 'child_process';
 import { promisify } from 'util';
@@ -48,8 +50,8 @@ export class SystemService {
 
   constructor(private readonly db: DatabaseService) {}
 
-  async getLogs(page = 1, limit = 50) {
-    const offset = (page - 1) * limit;
+  async getLogs(rawPage = 1, rawLimit = 50) {
+    const { page, limit, offset } = clampPaging(rawPage, rawLimit);
     const countRows = await this.db.query<any[]>('SELECT COUNT(*) AS total FROM Log_HeThong');
     const data = await this.db.query(
       'SELECT * FROM Log_HeThong ORDER BY ThoiGian DESC, MaLog DESC LIMIT ? OFFSET ?',
@@ -66,6 +68,14 @@ export class SystemService {
   }
 
   async markNotificationRead(id: number, maSV: string) {
+    const rows = await this.db.query<any[]>(
+      'SELECT MaThongBao FROM ThongBao WHERE MaThongBao = ? AND MaSV = ?',
+      [id, maSV]
+    );
+    if (rows.length === 0) {
+      throw new NotFoundException('Không tìm thấy thông báo này');
+    }
+
     await this.db.query(
       'UPDATE ThongBao SET DaDoc = 1 WHERE MaThongBao = ? AND MaSV = ?',
       [id, maSV]

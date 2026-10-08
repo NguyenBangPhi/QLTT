@@ -3,9 +3,10 @@
 Đồ án môn Quản lý thông tin. Toàn bộ nghiệp vụ (tính tiền phạt, kiểm tra hạn mức, đồng bộ tồn kho, ghi nhật ký) nằm trong Stored Procedure, Trigger và Function của MySQL — Backend chỉ gọi và bọc lỗi, Frontend chỉ hiển thị.
 
 ```
-DoAn/
-├── BE_QLTT/          NestJS + MySQL (repo riêng)
-├── FE_QLTT/          Nuxt 4 SPA (repo riêng)
+QLTT/
+├── BE_QLTT/          NestJS + MySQL
+├── FE_QLTT/          Nuxt 4 SPA
+├── docker/mysql/     Image MySQL tự build để ép charset utf8mb4
 └── docker-compose.yml
 ```
 

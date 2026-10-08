@@ -31,6 +31,24 @@ export default defineNuxtConfig({
 
   vite: {
     plugins: [tailwindcss()],
+
+    optimizeDeps: {
+      include: [
+        '@tanstack/vue-query',
+        '@vee-validate/zod',
+        '@vueuse/core',
+        'class-variance-authority',
+        'clsx',
+        'date-fns',
+        'lucide-vue-next',
+        'reka-ui',
+        'tailwind-merge',
+        'vee-validate',
+        'vue-sonner',
+        'zod',
+      ],
+    },
+
     server: {
       watch: { usePolling: true, interval: 500 },
     },

@@ -39,13 +39,19 @@ function startEdit(row: BorrowDetail) {
   ghiChu.value = row.GhiChu ?? ''
 }
 
+const tienPhatError = computed(() => {
+  const raw = String(tienPhat.value).trim()
+  if (!raw) return 'Vui lòng nhập tiền phạt'
+  if (!/^\d+$/.test(raw)) return 'Tiền phạt phải là số nguyên không âm'
+  return ''
+})
+
 const updateFine = useUpdateFine()
 
 function save() {
-  if (!editing.value) return
-  const value = Math.max(0, Math.round(Number(tienPhat.value) || 0))
+  if (!editing.value || tienPhatError.value) return
   updateFine.mutate(
-    { maCTPM: editing.value.MaCTPM, tienPhat: value, ghiChu: ghiChu.value },
+    { maCTPM: editing.value.MaCTPM, tienPhat: Number(tienPhat.value), ghiChu: ghiChu.value },
     { onSuccess: () => (editing.value = null) },
   )
 }
@@ -126,7 +132,18 @@ function save() {
       <div class="space-y-4">
         <div class="space-y-1.5">
           <label for="tien-phat" class="text-sm font-medium">Tiền phạt (VNĐ)</label>
-          <UiInput id="tien-phat" v-model="tienPhat" type="number" min="0" step="1000" />
+          <UiInput
+            id="tien-phat"
+            v-model="tienPhat"
+            type="number"
+            min="0"
+            step="1000"
+            :aria-invalid="Boolean(tienPhatError)"
+            :aria-describedby="tienPhatError ? 'tien-phat-error' : undefined"
+          />
+          <p v-if="tienPhatError" id="tien-phat-error" class="text-xs text-destructive">
+            {{ tienPhatError }}
+          </p>
           <p class="text-xs text-muted-foreground">
             Hiện tại: {{ formatCurrency(editing?.TienPhat ?? 0) }}
           </p>
@@ -147,7 +164,13 @@ function save() {
 
       <template #footer>
         <UiButton variant="outline" @click="editing = null">Huỷ</UiButton>
-        <UiButton :loading="updateFine.isPending.value" @click="save">Lưu thay đổi</UiButton>
+        <UiButton
+          :disabled="Boolean(tienPhatError)"
+          :loading="updateFine.isPending.value"
+          @click="save"
+        >
+          Lưu thay đổi
+        </UiButton>
       </template>
     </UiDialog>
   </div>

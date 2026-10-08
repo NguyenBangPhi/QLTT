@@ -68,7 +68,7 @@ const onSubmit = handleSubmit(async (values) => {
             v-model="username"
             v-bind="usernameAttrs"
             autocomplete="username"
-            placeholder="admin01"
+            placeholder="Nhập tên đăng nhập"
             :aria-invalid="Boolean(errors.username)"
             :aria-describedby="errors.username ? 'username-error' : undefined"
           />
@@ -85,7 +85,7 @@ const onSubmit = handleSubmit(async (values) => {
             v-bind="passwordAttrs"
             type="password"
             autocomplete="current-password"
-            placeholder="••••••"
+            placeholder="Nhập mật khẩu"
             :aria-invalid="Boolean(errors.password)"
             :aria-describedby="errors.password ? 'password-error' : undefined"
           />

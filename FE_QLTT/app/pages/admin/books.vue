@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
-import { AlertTriangle, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
+import { AlertTriangle, Pencil, Plus, RotateCw, Search, Trash2 } from 'lucide-vue-next'
 import { z } from 'zod'
 import type { Book } from '~/types/api'
 import { useAuthStore } from '~/stores/auth'
@@ -14,7 +14,7 @@ const auth = useAuthStore()
 const keyword = ref('')
 const debounced = refDebounced(keyword, 300)
 const filter = computed(() => ({ keyword: debounced.value.trim() || undefined }))
-const { data: books, isPending, error, refetch } = useBooks(filter)
+const { data: books, isPending, isFetching, error, refetch } = useBooks(filter)
 const { data: authors } = useAuthors()
 const { data: genres } = useGenres()
 
@@ -133,6 +133,10 @@ function confirmDelete() {
   <div>
     <CommonPageHeader title="Quản lý sách" description="Thêm, sửa và xoá đầu sách trong thư viện">
       <template #actions>
+        <UiButton variant="outline" :loading="isFetching" @click="refetch()">
+          <RotateCw v-if="!isFetching" aria-hidden="true" />
+          Làm mới
+        </UiButton>
         <UiButton @click="openCreate">
           <Plus aria-hidden="true" />
           Thêm sách
