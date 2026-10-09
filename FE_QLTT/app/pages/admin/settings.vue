@@ -48,10 +48,13 @@ function validate(key: string, value: string | number | undefined | null): strin
 }
 
 const draft = reactive<Record<string, string | number>>({})
+const lastSeen = new Map<string, string>()
 
 watchEffect(() => {
   for (const c of configs.value ?? []) {
-    if (draft[c.TenCauHinh] === undefined) draft[c.TenCauHinh] = c.GiaTri
+    if (lastSeen.get(c.TenCauHinh) === c.GiaTri) continue
+    lastSeen.set(c.TenCauHinh, c.GiaTri)
+    draft[c.TenCauHinh] = c.GiaTri
   }
 })
 
