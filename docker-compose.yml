@@ -15,7 +15,10 @@ services:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       TZ: Asia/Ho_Chi_Minh
     ports:
-      - "${DB_PORT_HOST:-3307}:3306"
+      # Chỉ bind vào 127.0.0.1: container vẫn nối qua mạng nội bộ Docker, còn máy
+      # khác trong cùng wifi thì không chạm tới được. DA-Security.sql tạo user với
+      # host '%' nên nếu mở ra 0.0.0.0 là ai cũng vào được bằng mật khẩu trong repo.
+      - "127.0.0.1:${DB_PORT_HOST:-3307}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       # Entrypoint chạy các file này theo thứ tự alphabet, nên phải đổi tên khi mount.
@@ -23,6 +26,8 @@ services:
       - ./BE_QLTT/docs/DA-Schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
       - ./BE_QLTT/docs/DA-CRUD.sql:/docker-entrypoint-initdb.d/02-crud.sql:ro
       - ./BE_QLTT/docs/DA-DATA.sql:/docker-entrypoint-initdb.d/03-data.sql:ro
+      # Phải chạy sau 02-crud vì nó GRANT EXECUTE lên các procedure tạo ở đó
+      - ./BE_QLTT/docs/DA-Security.sql:/docker-entrypoint-initdb.d/04-security.sql:ro
     healthcheck:
       test:
         ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${DB_PASSWORD}"]
